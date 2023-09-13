@@ -69,6 +69,7 @@ function Search-vROScriptItem
    - Add Case sensitivity searching
    - Add paging for Workflows
    - Add paging for Actions - not possible atm, as no parameters in API for actions
+   - Add foreach parallel to the search
 
 #>
 [CmdletBinding(DefaultParameterSetName="ByCredential")]
@@ -170,7 +171,7 @@ function Search-vROScriptItem
         $headers.Add("Content-Type", 'application/json')
 
         $method = "POST"
-        $baseUrl = "https://$($vraServer)"
+        $baseUrl = "https://$($ComputerName)"
         $uri = "$($baseUrl)/csp/gateway/am/api/login?access_token"
 
         Write-Verbose "$(Get-Date) Request a token from vRA"
@@ -193,10 +194,10 @@ $newBody = @"
 "@
 
         $method = "POST"
-        $baseUrl = "https://$($vraServer)"
+        $baseUrl = "https://$($ComputerName)"
         $uri = "$($baseUrl)/iaas/api/login"
 
-        Write-Verbose "$(Get-Date) Request a token from vRA"
+        Write-Verbose "$(Get-Date) Request a bearer token from vRA"
         try
         {
             $response = $null
@@ -208,7 +209,7 @@ $newBody = @"
             throw
         }
 
-        Write-Verbose "$(Get-Date) Token received. Add the retrieved Bearer token to the headers"
+        Write-Verbose "$(Get-Date) Bearer Token received. Add the retrieved Bearer token to the headers"
         $bearer_token = $response.token
         $headers.Add("Authorization", "Bearer $($bearer_token)")
 
@@ -242,7 +243,22 @@ $newBody = @"
             $method = "GET"
             $uri = "$($apiUri)/actions"
             $result = $null
-            $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
+
+            Write-Verbose "uri: $($uri)"
+            Write-Verbose "method: $($method)"
+            Write-Verbose "skipcert: $($SkipCertificateCheck)"
+            Write-Verbose "headers: $($headers | Out-String)"
+
+            try {
+                $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
+            } catch {
+                    $_.Exception.gettype().fullname
+                    $_.Exception
+                    $_.ErrorDetails.Message
+                    Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                    throw
+            }
+
 
             Write-Verbose "Create a new flat custom object for easier manipulation"
             $item = $null
@@ -297,7 +313,7 @@ $newBody = @"
                 {
                     Write-Verbose "Regex search"
                     try {
-                        if ($linesFound = $result.script.Split("`r`n") | Select-String -Pattern $pattern | Select-Object LineNumber, Line)
+                        if ($linesFound = $result.script.Split("`n") | Select-String -Pattern $pattern | Select-Object LineNumber, Line)
                         {
                             Write-Verbose "Lines found: $($linesFound.count)"
                             $hash=[ordered]@{}
@@ -324,7 +340,7 @@ $newBody = @"
                     Write-Verbose "Simple search"
 
                     try {
-                        if ($linesFound = $result.script.Split("`r`n") | Select-String -SimpleMatch $pattern | Select-Object LineNumber, Line)
+                        if ($linesFound = $result.script.Split("`n") | Select-String -SimpleMatch $pattern | Select-Object LineNumber, Line)
                         {
                             Write-Verbose "Lines found: $($linesFound.count)"
                             $hash=[ordered]@{}
@@ -357,7 +373,10 @@ $newBody = @"
 
             $uri = "$($apiUri)/workflows?maxResult=2147483647&startIndex=0&queryCount=false"
             $result = $null
-
+            Write-Verbose "uri: $($uri)"
+            Write-Verbose "method: $($method)"
+            Write-Verbose "skipcert: $($SkipCertificateCheck)"
+            Write-Verbose "headers: $($headers | Out-String)"
 
             try {
                 $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
@@ -427,7 +446,7 @@ $newBody = @"
                     {
                         Write-Verbose "Regex search"
                         try {
-                            if ($linesFound = $contentItem.script.value.Split("`r`n") | Select-String -Pattern $pattern | Select-Object LineNumber, Line)
+                            if ($linesFound = $contentItem.script.value.Split("`n") | Select-String -Pattern $pattern | Select-Object LineNumber, Line)
                             {
                                 Write-Verbose "Lines found: $($linesFound.count)"
                                 $hash=[ordered]@{}
@@ -454,7 +473,7 @@ $newBody = @"
                     } else {
                         Write-Verbose "Simple search"
                         try {
-                            if ($linesFound = $contentItem.script.value.Split("`r`n") | Select-String -SimpleMatch $pattern | Select-Object LineNumber, Line)
+                            if ($linesFound = $contentItem.script.value.Split("`n") | Select-String -SimpleMatch $pattern | Select-Object LineNumber, Line)
                             {
                                 Write-Verbose "Lines found: $($linesFound.count)"
                                 $hash=[ordered]@{}
