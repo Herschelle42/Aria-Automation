@@ -88,7 +88,7 @@ function Search-vROScriptItem
         [int]$Port,
 
         [Parameter(Mandatory,ParameterSetName="ByUsername")]
-        #[ValidatePattern("^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage="Username is not in UPN format. user@corp.local")]
+        [ValidatePattern("^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage="Username is not in UPN format. user@corp.local")]
         [string]$Username,
 
         [Parameter(Mandatory,ParameterSetName="ByUsername")]
@@ -117,6 +117,7 @@ function Search-vROScriptItem
     Begin
     {
 
+        Write-Verbose "ParameterSet: $($PSCmdlet.ParameterSetName)"
         Write-Verbose "Protocol: $($Protocol)"
         Write-Verbose "ComputerName: $($ComputerName)"
         Write-Verbose "Port: $($Port)"
@@ -125,26 +126,24 @@ function Search-vROScriptItem
         #TODO: Change to a switch?
         #TODO: Add check for an existing PowervRA connection. can then skip the authentication steps
         #--- extract username and password from credential
-        if ($PSBoundParameters.ContainsKey("Credential")){
+        if ($PSCmdlet.ParameterSetName -eq "ByCredential") {
             Write-Verbose "Credential: $($Credential | Out-String)"
 
-            $Username = $Credential.UserName.Split("@")[0]
+            $shortUsername = $Credential.UserName.Split("@")[0]
             $UnsecurePassword = $Credential.GetNetworkCredential().Password
             $vRADomain = $Credential.UserName.Split("@")[1]
 
-        } elseif ($PSBoundParameters.ContainsKey("Password")){
-            $Username = $Credential.UserName.Split("@")[0]
-            $vRADomain = $Credential.UserName.Split("@")[1]
-            Write-Verbose "Username: $($Username)"
-            #Write-Verbose "Password: $($Password)"
+        } elseif ($PSCmdlet.ParameterSetName -eq "ByUsername") {
+            $shortUsername = $Username.Split("@")[0]
+            $vRADomain = $Username.Split("@")[1]
             $UnsecurePassword = (New-Object System.Management.Automation.PSCredential('username', $Password)).GetNetworkCredential().Password
         } else {
             throw "Unable to determine parameter set."
         }
 
         Write-Verbose "Username: $($Username)"
+        Write-Verbose "shortUsername: $($shortUsername)"
         Write-Verbose "vRADomain: $($vRADomain)"
-        #Write-Verbose "insecure: $($UnsecurePassword)"
 
         Write-Verbose "Type: $($Type)"
         Write-Verbose "Pattern: $($Pattern)"
@@ -153,7 +152,7 @@ function Search-vROScriptItem
         
         Write-Verbose "vRA8 Header Creation"
         $body = @{
-            username = $Username
+            username = $shortUsername
             password = $UnsecurePassword
             tenant = $tenant
             domain = $vRADomain
