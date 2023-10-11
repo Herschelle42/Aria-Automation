@@ -113,6 +113,7 @@ function Search-vROScriptItem
         [Switch]$Regex=$false,
 
         [Parameter(Mandatory=$false)]
+        [ValidateScript({ foreach ($tag in $_) { if ($tag -match '\s') { return $false } } return $true }, ErrorMessage="Tags cannot contain spaces")]
         [string[]]$Tags,
 
         [Parameter(Mandatory=$false)]
