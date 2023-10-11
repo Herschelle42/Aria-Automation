@@ -25,6 +25,8 @@ function Search-vROScriptItem
 .PARAMETER Regex
     Switch indicating whether the Pattern is a regex. Default is false.
     Uses Select-String -Pattern parameter if enabled. Else uses the -SimpleMatch for non-regex string searching.
+.PARAMETER Tags
+    An array of tag names to filter Workflows. Actions do not support Tag filtering.
 .PARAMETER SkipCertificateCheck
     Skips certificate validation checks that include all validations such as expiration, revocation, trusted root authority, etc.
     WARNING: Using this parameter is not secure and is not recommended. This switch is only intended to be used against known hosts using a self-signed certificate for testing purposes. Use at your own risk.
@@ -69,7 +71,8 @@ function Search-vROScriptItem
    - Add Case sensitivity searching
    - Add paging for Workflows
    - Add paging for Actions - not possible atm, as no parameters in API for actions
-   - Add foreach parallel to the search
+   - Add foreach parallel to the search (if using Powershell 7.x +)
+   - Add a count property to each output. For each item in which the string if found add the count of instances. we do have the lines but having a count might be useful too. maybe...
 
 #>
 [CmdletBinding(DefaultParameterSetName="ByCredential")]
@@ -108,6 +111,9 @@ function Search-vROScriptItem
 
         [Parameter(Mandatory=$false)]
         [Switch]$Regex=$false,
+
+        [Parameter(Mandatory=$false)]
+        [string[]]$Tags,
 
         [Parameter(Mandatory=$false)]
         [Switch]$SkipCertificateCheck=$false
@@ -149,6 +155,8 @@ function Search-vROScriptItem
         Write-Verbose "Pattern: $($Pattern)"
         Write-Verbose "Regex: $($Regex)"
         
+        Write-Verbose "Tags: $($Tags)"
+
         
         Write-Verbose "vRA8 Header Creation"
         $body = @{
@@ -369,8 +377,15 @@ $newBody = @"
         {
             Write-Verbose "Get Workflows"
             $method = "GET"
-
+            
             $uri = "$($apiUri)/workflows?maxResult=2147483647&startIndex=0&queryCount=false"
+
+            if($Tags) {
+                Write-Verbose "Adding Tags filter"
+                #In the API the array of strings is comma separated.
+                $uri = "$($uri)&tags=$($tags -join "%2C")"
+            }
+
             $result = $null
             Write-Verbose "uri: $($uri)"
             Write-Verbose "method: $($method)"
