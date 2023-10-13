@@ -26,10 +26,10 @@ function Search-vROScriptItem
     Switch indicating whether the Pattern is a regex. Default is false.
     Uses Select-String -Pattern parameter if enabled. Else uses the -SimpleMatch for non-regex string searching.
 .PARAMETER Tags
-    An array of tag names to filter Workflows. Case insensitive.
-    The tag array search is an AND. Meaning the workflow must contain all the tags. Each folder in a workflow path is a tag.
+    An array of tags to filter Workflows. Case insensitive.
+    The tag array search is an "AND". Meaning the workflow must contain ALL the tags. Each folder in a Workflow path is a tag.
     Filtering by tags can significantly speed up the workflow search.
-    Actions do not support Tag filtering and will be ignored during searches for Actions.
+    Actions do not support Tag filtering. Tags will be ignored during Action searches.
 .PARAMETER SkipCertificateCheck
     Skips certificate validation checks that include all validations such as expiration, revocation, trusted root authority, etc.
     WARNING: Using this parameter is not secure and is not recommended. This switch is only intended to be used against known hosts using a self-signed certificate for testing purposes. Use at your own risk.
