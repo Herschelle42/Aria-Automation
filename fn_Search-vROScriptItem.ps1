@@ -26,7 +26,10 @@ function Search-vROScriptItem
     Switch indicating whether the Pattern is a regex. Default is false.
     Uses Select-String -Pattern parameter if enabled. Else uses the -SimpleMatch for non-regex string searching.
 .PARAMETER Tags
-    An array of tag names to filter Workflows. Actions do not support Tag filtering.
+    An array of tag names to filter Workflows. Case insensitive.
+    The tag array search is an AND. Meaning the workflow must contain all the tags. Each folder in a workflow path is a tag.
+    Filtering by tags can significantly speed up the workflow search.
+    Actions do not support Tag filtering and will be ignored during searches for Actions.
 .PARAMETER SkipCertificateCheck
     Skips certificate validation checks that include all validations such as expiration, revocation, trusted root authority, etc.
     WARNING: Using this parameter is not secure and is not recommended. This switch is only intended to be used against known hosts using a self-signed certificate for testing purposes. Use at your own risk.
@@ -56,7 +59,13 @@ function Search-vROScriptItem
     Script : {@{LineNumber=28; Line=        A_Standard_A0:  "CPU Cores (1), Memory:GiB (0.768), Local HDD:GiB (20), Max data disks(1), Max data disk throughput:IOPS (1x500), Max NICs/Network bandwidth (1/low)",}, @{LineNumber=29; Line=        A_Standard_A1:  "CPU Cores (1), Memory:GiB (1.75), Local HDD:GiB (70), Max data disks(2), Max data disk throughput:IOPS (2x500), Max NICs/Network bandwidth (1/moderate)",}, @{LineNumber=30; Line=        A_Standard_A2:  "CPU Cores (2), Memory:GiB (3.5), Local HDD:GiB (135), Max data disks(4), Max data disk throughput:IOPS (4x500), Max NICs/Network bandwidth (1/moderate)",}, @{LineNumber=31; Line=        A_Standard_A3:  "CPU Cores (4), Memory:GiB (7), Local HDD:GiB (285), Max data disks(8), Max data disk throughput:IOPS (8x500), Max NICs/Network bandwidth (2/high)",}...}
 
     Same query with the -Regex parameter added, returns line items where the dot (.) is treated as a regex item indicating "any" character.
+.EXAMPLE
+    $pattern = ".local"
+    $credential = Get-Credential -Username "user@corp.local" -Message "Please enter Aria Automation Username and password"
+    [array]$result = Search-vROScriptItem -ComputerName "vro.corp.local" -Credential $credential -Pattern $pattern -Type Workflow -Tags "Dev","Automation"
 
+    Return only workflows with the Tags "Dev" AND "Automation" AND the search string ".local"
+    
 .INPUTS
    [String]
    [Int]
