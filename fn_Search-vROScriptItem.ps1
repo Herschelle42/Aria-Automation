@@ -36,7 +36,7 @@ function Search-vROScriptItem
 .EXAMPLE
     $pattern = ".local"
     $credential = Get-Credential -Username "user@corp.local" -Message "Please enter Aria Automation Username and password"
-    [array]$result = Search-vROScriptItem -ComputerName "vro.corp.local" -Credential $credential -Type action -Pattern $pattern
+    [array]$result = Search-vROScriptItem -ComputerName "vro.corp.local" -Credential $credential -Type Action -Pattern $pattern
     $result[0]
 
     Type   : Action
@@ -49,7 +49,7 @@ function Search-vROScriptItem
 .EXAMPLE
     $pattern = ".local"
     $credential = Get-Credential -Username "administrator@vsphere.local" -Message "Please enter Aria Automation Username and password"
-    [array]$result = Search-vROScriptItem -ComputerName "vro.corp.local" -Credential $credential -Type action -Pattern $pattern -Regex
+    [array]$result = Search-vROScriptItem -ComputerName "vro.corp.local" -Credential $credential -Type Action -Pattern $pattern -Regex
     $result[0]
     
     Type   : Action
@@ -65,7 +65,7 @@ function Search-vROScriptItem
     [array]$result = Search-vROScriptItem -ComputerName "vro.corp.local" -Credential $credential -Pattern $pattern -Type Workflow -Tags "Dev","Automation"
 
     Return only workflows with the Tags "Dev" AND "Automation" AND the search string ".local"
-    
+
 .INPUTS
    [String]
    [Int]
@@ -82,6 +82,10 @@ function Search-vROScriptItem
    - Add paging for Actions - not possible atm, as no parameters in API for actions
    - Add foreach parallel to the search (if using Powershell 7.x +)
    - Add a count property to each output. For each item in which the string if found add the count of instances. we do have the lines but having a count might be useful too. maybe...
+
+    Report the full path of the items containg the search criteria:
+    $fullpath = @{name="FullPath"; Expression={"$($_.Type): $($_.Path)/$($_.Name)"}}
+    ... | Select $fullpath | sort FullPath
 
 #>
 [CmdletBinding(DefaultParameterSetName="ByCredential")]
@@ -199,7 +203,10 @@ function Search-vROScriptItem
         }
         catch 
         {
-            Write-Output "$(Get-Date) StatusCode:" $_.Exception.Response.StatusCode.value__
+            $_.Exception.gettype().fullname
+            $_.Exception
+            $_.ErrorDetails.Message
+            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
             throw
         }
 
@@ -222,7 +229,10 @@ $newBody = @"
         }
         catch 
         {
-            Write-Output "$(Get-Date) StatusCode:" $_.Exception.Response.StatusCode.value__
+            $_.Exception.gettype().fullname
+            $_.Exception
+            $_.ErrorDetails.Message
+            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
             throw
         }
 
@@ -318,10 +328,12 @@ $newBody = @"
                         $object
                         #>
                     } else {
+                        Write-Output "Action: $($item.id) ($($item.name))"
                         throw
                     }
 
                 } catch {
+                    Write-Output "Action: $($item.id) ($($item.name))"
                     throw
                 }
 
@@ -347,9 +359,17 @@ $newBody = @"
                         if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                             Write-Verbose "Contains no script."
                         } else {
+                            $_.Exception.gettype().fullname
+                            $_.Exception
+                            $_.ErrorDetails.Message
+                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                             throw
                         }
                     } catch {
+                        $_.Exception.gettype().fullname
+                        $_.Exception
+                        $_.ErrorDetails.Message
+                        Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                         throw
                     }
 
@@ -374,9 +394,17 @@ $newBody = @"
                         if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                             Write-Verbose "Contains no script."
                         } else {
+                            $_.Exception.gettype().fullname
+                            $_.Exception
+                            $_.ErrorDetails.Message
+                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                             throw
                         }
                     } catch {
+                        $_.Exception.gettype().fullname
+                        $_.Exception
+                        $_.ErrorDetails.Message
+                        Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                         throw
                     }
                 }
@@ -415,7 +443,11 @@ $newBody = @"
             Write-Verbose "Create a new flat custom object for easier manipulation"
             $item = $null
             $itemList = foreach ($item in $result.link){
-    
+
+                #TODO: Remove this hack when WF is fixed
+                #Avi Deployment WF: Cluster Node Replacement is corrupt
+                if($item.id -eq "62307943-f03c-4f5a-80cc-58eb585443e2") { continue }
+
                 $hash = [ordered]@{}
                 foreach ($attrib in $item.attributes)
                 {
@@ -433,6 +465,9 @@ $newBody = @"
             $item = $null
             foreach ($item in $itemList)
             {
+                #TODO: Remove this hack when fixed - Avi Deployment WF: Cluster Node Replacement is corrupt
+                if($item.id -eq "62307943-f03c-4f5a-80cc-58eb585443e2") { continue }
+
                 Write-Verbose "Workflow: $($item.name)"
                 try {
                     $wfContent = $null
@@ -441,7 +476,7 @@ $newBody = @"
         
                     if ($($_.Exception.Message) -eq "The remote server returned an error: (400) Bad Request." )
                     {
-                        Write-Verbose "[ERROR] !!! $($_.Exception.Message)"
+                        Write-Verbose "[ERROR] !!! $($_.Exception.Message)" -Verbose:$VerbosePreference
                         <# Undecided how we surface this up.
                         $hash=[ordered]@{}
                         $hash.Name = $item.name
@@ -452,10 +487,25 @@ $newBody = @"
                         $object
                         #>
                     } else {
+                        Write-Output "[System.Net.WebException]"
+                        Write-Output "Workflow: $($item.id) ($($item.name))"
+                        <#
+                        $_.Exception.gettype().fullname
+                        Write-Output "StatusCode: $($_.Exception.Response.StatusCode.value__)" 
+                        $_.Exception
+                        $_.ErrorDetails.Message
+                        #>
                         throw
                     }
 
                 } catch {
+                    Write-Output "Workflow: $($item.id) ($($item.name))"
+                    <#
+                    $_.Exception.gettype().fullname
+                    $_.Exception
+                    $_.ErrorDetails.Message
+                    Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                    #>
                     throw
                 }
 
@@ -488,9 +538,17 @@ $newBody = @"
                             if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                                 Write-Verbose "Contains no script."
                             } else {
+                                $_.Exception.gettype().fullname
+                                $_.Exception
+                                $_.ErrorDetails.Message
+                                Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                                 throw
                             }
                         } catch {
+                            $_.Exception.gettype().fullname
+                            $_.Exception
+                            $_.ErrorDetails.Message
+                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                             throw
                         }
 
@@ -514,9 +572,17 @@ $newBody = @"
                             if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                                 Write-Verbose "Contains no script."
                             } else {
+                                $_.Exception.gettype().fullname
+                                $_.Exception
+                                $_.ErrorDetails.Message
+                                Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                                 throw
                             }
                         } catch {
+                            $_.Exception.gettype().fullname
+                            $_.Exception
+                            $_.ErrorDetails.Message
+                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
                             throw
                         }
                     }
