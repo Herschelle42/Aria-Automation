@@ -88,6 +88,10 @@ function Search-vROScriptItem
     ... | Select $fullpath | sort FullPath
 
 #>
+
+#Powershell 7+
+#Requires -Version 7.0
+
 [CmdletBinding(DefaultParameterSetName="ByCredential")]
     Param
     (
@@ -137,17 +141,17 @@ function Search-vROScriptItem
     Begin
     {
 
-        Write-Verbose "ParameterSet: $($PSCmdlet.ParameterSetName)"
-        Write-Verbose "Protocol: $($Protocol)"
-        Write-Verbose "ComputerName: $($ComputerName)"
-        Write-Verbose "Port: $($Port)"
-        Write-Verbose "SkipCertificateCheck: $($SkipCertificateCheck)"
+        Write-Verbose "$(Get-Date) ParameterSet: $($PSCmdlet.ParameterSetName)"
+        Write-Verbose "$(Get-Date) Protocol: $($Protocol)"
+        Write-Verbose "$(Get-Date) ComputerName: $($ComputerName)"
+        Write-Verbose "$(Get-Date) Port: $($Port)"
+        Write-Verbose "$(Get-Date) SkipCertificateCheck: $($SkipCertificateCheck)"
 
         #TODO: Change to a switch?
         #TODO: Add check for an existing PowervRA connection. can then skip the authentication steps
         #--- extract username and password from credential
         if ($PSCmdlet.ParameterSetName -eq "ByCredential") {
-            Write-Verbose "Credential: $($Credential | Out-String)"
+            Write-Verbose "$(Get-Date) Credential: $($Credential | Out-String)"
 
             $shortUsername = $Credential.UserName.Split("@")[0]
             $UnsecurePassword = $Credential.GetNetworkCredential().Password
@@ -161,18 +165,18 @@ function Search-vROScriptItem
             throw "Unable to determine parameter set."
         }
 
-        Write-Verbose "Username: $($Username)"
-        Write-Verbose "shortUsername: $($shortUsername)"
-        Write-Verbose "vRADomain: $($vRADomain)"
+        Write-Verbose "$(Get-Date) Username: $($Username)"
+        Write-Verbose "$(Get-Date) shortUsername: $($shortUsername)"
+        Write-Verbose "$(Get-Date) vRADomain: $($vRADomain)"
 
-        Write-Verbose "Type: $($Type)"
-        Write-Verbose "Pattern: $($Pattern)"
-        Write-Verbose "Regex: $($Regex)"
+        Write-Verbose "$(Get-Date) Type: $($Type)"
+        Write-Verbose "$(Get-Date) Pattern: $($Pattern)"
+        Write-Verbose "$(Get-Date) Regex: $($Regex)"
         
-        Write-Verbose "Tags: $($Tags)"
+        Write-Verbose "$(Get-Date) Tags: $($Tags)"
 
         
-        Write-Verbose "vRA8 Header Creation"
+        Write-Verbose "$(Get-Date) vRA8 Header Creation"
         $body = @{
             username = $shortUsername
             password = $UnsecurePassword
@@ -196,6 +200,7 @@ function Search-vROScriptItem
         $uri = "$($baseUrl)/csp/gateway/am/api/login?access_token"
 
         Write-Verbose "$(Get-Date) Request a token from vRA"
+        Write-Verbose "$(Get-Date) uri: $($uri)"
         try
         {
             $response = $null
@@ -203,10 +208,10 @@ function Search-vROScriptItem
         }
         catch 
         {
-            $_.Exception.gettype().fullname
-            $_.Exception
-            $_.ErrorDetails.Message
-            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+            Write-Output "Exception:            $($_.Exception)"
+            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
             throw
         }
 
@@ -279,10 +284,10 @@ $newBody = @"
             try {
                 $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
             } catch {
-                    $_.Exception.gettype().fullname
-                    $_.Exception
-                    $_.ErrorDetails.Message
-                    Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                    Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                    Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                    Write-Output "Exception:            $($_.Exception)"
+                    Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                     throw
             }
 
@@ -359,17 +364,17 @@ $newBody = @"
                         if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                             Write-Verbose "Contains no script."
                         } else {
-                            $_.Exception.gettype().fullname
-                            $_.Exception
-                            $_.ErrorDetails.Message
-                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                            Write-Output "Exception:            $($_.Exception)"
+                            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                             throw
                         }
                     } catch {
-                        $_.Exception.gettype().fullname
-                        $_.Exception
-                        $_.ErrorDetails.Message
-                        Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                        Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                        Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                        Write-Output "Exception:            $($_.Exception)"
+                        Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                         throw
                     }
 
@@ -394,17 +399,17 @@ $newBody = @"
                         if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                             Write-Verbose "Contains no script."
                         } else {
-                            $_.Exception.gettype().fullname
-                            $_.Exception
-                            $_.ErrorDetails.Message
-                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                            Write-Output "Exception:            $($_.Exception)"
+                            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                             throw
                         }
                     } catch {
-                        $_.Exception.gettype().fullname
-                        $_.Exception
-                        $_.ErrorDetails.Message
-                        Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                        Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                        Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                        Write-Output "Exception:            $($_.Exception)"
+                        Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                         throw
                     }
                 }
@@ -433,11 +438,11 @@ $newBody = @"
             try {
                 $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
             } catch {
-                    $_.Exception.gettype().fullname
-                    $_.Exception
-                    $_.ErrorDetails.Message
-                    Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
-                    throw
+                Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                Write-Output "Exception:            $($_.Exception)"
+                Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+                throw
             }
 
             Write-Verbose "Create a new flat custom object for easier manipulation"
@@ -538,18 +543,20 @@ $newBody = @"
                             if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                                 Write-Verbose "Contains no script."
                             } else {
-                                $_.Exception.gettype().fullname
-                                $_.Exception
-                                $_.ErrorDetails.Message
-                                Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                                Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                                Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                                Write-Output "Exception:            $($_.Exception)"
+                                Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                                 throw
+                
                             }
                         } catch {
-                            $_.Exception.gettype().fullname
-                            $_.Exception
-                            $_.ErrorDetails.Message
-                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                            Write-Output "Exception:            $($_.Exception)"
+                            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                             throw
+            
                         }
 
                     } else {
@@ -572,18 +579,20 @@ $newBody = @"
                             if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
                                 Write-Verbose "Contains no script."
                             } else {
-                                $_.Exception.gettype().fullname
-                                $_.Exception
-                                $_.ErrorDetails.Message
-                                Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                                Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                                Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                                Write-Output "Exception:            $($_.Exception)"
+                                Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                                 throw
+                
                             }
                         } catch {
-                            $_.Exception.gettype().fullname
-                            $_.Exception
-                            $_.ErrorDetails.Message
-                            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                            Write-Output "Exception:            $($_.Exception)"
+                            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
                             throw
+            
                         }
                     }
                     
