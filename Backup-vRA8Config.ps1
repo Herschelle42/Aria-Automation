@@ -229,6 +229,16 @@ Process {
         } else {
             $escapedURI = [uri]::EscapeUriString($uri + "?page=$($pageCount)&limit=$($pageSize)&orderby=name")
         }
+
+        #hack for deployments. uses top instead of limit. and has no orderby and skip instead of page
+        Write-Verbose "$(Get-Date) IndexOf deployments : $($uri.IndexOf("deployments"))"
+        if ($uri.IndexOf("deployments") -gt 0 -and $uri.IndexOf("?") -gt 0)
+        {
+            $escapedURI = [uri]::EscapeUriString($uri + "&`$skip=$($pageCount*$PageSize)&`$top=$($pageSize)")
+        } else {
+            $escapedURI = [uri]::EscapeUriString($uri + "?`$skip=$($pageCount*$PageSize)&`$top=$($pageSize)")
+        }
+
         Write-Verbose "$(Get-Date) Escaped URI: $($escapedURI)"
         <#
         if($uri.IndexOf("@") -gt 0) {
@@ -265,9 +275,18 @@ Process {
                 Write-Verbose "$(Get-Date) totalPages: $($object.metadata.totalPages)"
                 Write-Verbose "$(Get-Date) totalElements: $($object.metadata.totalElements)"
                 $totalPages = [Math]::Ceiling($object.metadata.totalElements/$pageSize)
+
             } else {
                 $totalPages = $object.metadata.totalPages
             }
+
+        #hack for /api/iaas/deployments where not found in metadata.
+        } elseif ($object.totalElements -and $object.numberOfElements) {
+
+            Write-Verbose "$(Get-Date) totalElements:  $($object.totalElements)"
+            Write-Verbose "$(Get-Date) numberOfElements:  $($object.numberOfElements)"
+            $totalPages = [Math]::Ceiling($object.totalElements/$pageSize)  
+                  
         } else {
             $pageCount = $totalPages+1
         }
