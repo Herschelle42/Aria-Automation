@@ -80,8 +80,6 @@ function Search-vRO8ScriptItem
 
 #>
 
-
-
 [CmdletBinding(DefaultParameterSetName="ByCredential")]
     Param
     (
@@ -98,7 +96,7 @@ function Search-vRO8ScriptItem
         [int]$Port,
 
         [Parameter(Mandatory,ParameterSetName="ByUsername")]
-        [ValidatePattern("^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+        #[ValidatePattern("^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage="Username is not in UPN format. user@corp.local")]
         [string]$Username,
 
         [Parameter(Mandatory,ParameterSetName="ByUsername")]
@@ -106,7 +104,7 @@ function Search-vRO8ScriptItem
 
         [Parameter(Mandatory,ParameterSetName="ByCredential")]
         [ValidateNotNullOrEmpty()]
-        [ValidateScript({$_.UserName -match "^[^@\s]+@[^@\s]+\.[^@\s]+$"})]
+        #[ValidateScript({$_.UserName -match "^[^@\s]+@[^@\s]+\.[^@\s]+$"}, ErrorMessage="Username is not in UPN format. user@corp.local")]
         [Management.Automation.PSCredential]$Credential,
 
         [Parameter(Mandatory=$false)]
@@ -120,7 +118,7 @@ function Search-vRO8ScriptItem
         [Switch]$Regex=$false,
 
         [Parameter(Mandatory=$false)]
-        [ValidateScript({ foreach ($tag in $_) { if ($tag -match '\s') { return $false } } return $true })]
+        #[ValidateScript({ foreach ($tag in $_) { if ($tag -match '\s') { return $false } } return $true }, ErrorMessage="Tags cannot contain spaces")]
         [string[]]$Tags,
 
         [Parameter(Mandatory=$false)]
@@ -169,6 +167,7 @@ function Search-vRO8ScriptItem
         if ($PSVersionTable.PSVersion.Major -le 5 -and $SkipCertificateCheck) {
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
         }
+
         
         Write-Verbose "$(Get-Date) vRA8 Header Creation"
         $body = @{
