@@ -165,6 +165,10 @@ function Search-vRO8ScriptItem
         
         Write-Verbose "$(Get-Date) Tags: $($Tags)"
 
+        Write-Verbose "Using Powershell version: $($PSVersionTable.PSVersion.Major)"
+        if ($PSVersionTable.PSVersion.Major -le 5 -and $SkipCertificateCheck) {
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+        }
         
         Write-Verbose "$(Get-Date) vRA8 Header Creation"
         $body = @{
