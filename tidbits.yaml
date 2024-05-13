@@ -1,0 +1,4 @@
+
+#example (not tested) of how to dynamically assign a guest customisation specification on the cloud template
+customizationSpec: '${input.osType == "linux" ? "vra8linux" : "vra8windows"}'
+
