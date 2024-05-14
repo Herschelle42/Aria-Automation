@@ -13,7 +13,17 @@ myArray = textList.filter(function(item) {
 
 //--- Create a resource element
 var resourcePath = 'zDev/example'
-var resourceName = 'test'
+
+//create a resource name with date and time
+//e.g. log 2024-05-14-19-55-38
+var date = new Date();
+var dateTimeString = date.getFullYear() + '-' +
+('0' + (date.getMonth()+1) 	).slice(-2) + '-' + 
+('0' + 	date.getDate()		).slice(-2) + '-' + 
+('0' + 	date.getHours()		).slice(-2) + '-' + 
+('0' + 	date.getMinutes()	).slice(-2) + '-' + 
+('0' + 	date.getSeconds()	).slice(-2) 
+var resourceName = 'log ' + dateTimeString;
 
 var myProps = new Properties();
 myProps['level1'] = {};
@@ -32,4 +42,8 @@ mimeAttachment.content = JSON.stringify(myProps);
 mimeAttachment.mimeType = "text/plain";
 mimeAttachment.name = resourceElement.name;
 resourceElement.setContentFromMimeAttachment(mimeAttachment);
+
+//EBS report event topic and type when the workflow is running
+System.warn('eventTopicId: ' + System.getContext().getParameter("__metadata_eventTopicId"));
+System.warn('targetType:   ' + System.getContext().getParameter("__metadata_targetType"));
 
