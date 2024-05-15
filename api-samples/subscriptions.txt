@@ -1,0 +1,108 @@
+Looking to create a script to create subscriptions. specifically for development and testing. 
+
+Get Subscriptions
+https://vra.corp.local/event-broker/api/subscriptions?page=0&size=20&%24filter=type%20eq%20%27RUNNABLE%27
+
+
+Deployment Requested
+https://vra.corp.local/event-broker/api/subscriptions
+POST
+
+runnableId is the workflowId
+
+Authorization:
+Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjI0NDMxMjUwNjU4NzQ1MTA1NjQifQ.eyJpc3MiOiJodHRwOi8vaWRlbnRpdHktc2VydmljZS5wcmVsdWRlLnN2Yy5jbHVzdGVyLmxvY2FsOjgwMDAiLCJpYXQiOjE3MTU2NjM1MzMsImV4cCI6MTcxNTY5MjMzMywianRpIjoiMDMxMzdiMzAtNTkyZS00NDljLWEzYTItZTZkZmQwYjIwN2IzIiwiY29udGV4dCI6Ilt7XCJtdGRcIjpcInVybjpvYXNpczpuYW1lczp0YzpTQU1MOjIuMDphYzpjbGFzc2VzOlBhc3N3b3JkUHJvdGVjdGVkVHJhbnNwb3J0XCIsXCJpYXRcIjoxNzE1NjYzNTMyLFwiaWRcIjoxNX1dIiwiYXpwIjoidWktWHB2cld2azVnWXFuMUpJUiIsInN1YiI6ImF1dGguaW5mcmEuYWJzLmdvdi5hdTo3YjQzYjgxMC00NDFiLTQ0MjYtOGVjNS00ODA0MDk3MjJmNmIiLCJkb21haW4iOiJhdXRoLmluZnJhLmFicy5nb3YuYXUiLCJ1c2VybmFtZSI6ImZyaXQ4bCIsInBlcm1zIjpbImNzcDpvcmdfb3duZXIiLCJleHRlcm5hbC83YTczODYzMi01ZTlkLTRjZTEtODI1ZC1hMzk1ZTE0ZmM1YWQvb3JjaGVzdHJhdGlvbjphZG1pbiIsImV4dGVybmFsLzY4MjQ1OTkxLTI0MGMtNDBkYy1iYzJmLWEzYmI5OWZmZjNiMy9jYXRhbG9nOnVzZXIiLCJleHRlcm5hbC82ODI0NTk5MS0yNDBjLTQwZGMtYmMyZi1hM2JiOTlmZmYzYjMvY2F0YWxvZzphZG1pbiIsImV4dGVybmFsLzY4MjQ1OTkxLTI0MGMtNDBkYy1iYzJmLWEzYmI5OWZmZjNiMy9jYXRhbG9nOnZpZXdlciIsImV4dGVybmFsLzcxMmIzNzIyLWJmYzEtNGRiOS1hNDA2LTljZDkxYmM1ZmM1My9hdXRvbWF0aW9uc2VydmljZTpjbG91ZF9hZG1pbiJdLCJjb250ZXh0X25hbWUiOiIzN2E0ODg1My02ZTAwLTQwNTktOTliNC02YzZlNzJjZjlhZWEiLCJhY2N0IjoiZnJpdDhsIn0.KVPTzTHtHTMTmtpLkW6bP5uUtn9HPEbFbxnDwkL8j-JPUmzfhjoD8mKE9bdJKLOR-kxwGV3W79mDjMZ8HOIwMUjrKF4zVuzUQIqj2FuVe8Js_vfCDJ7_xP4dJTkfg-i50ApsJ8RCB4JlEalefWNEi3CnPvNv0zVaxUfE-oFuIwlOuHHwkxRUEZHmaOv5gSExuFhbVUwphG5u7DzDBS0fZq_NPUdo4o7XdnMQGL4-SfarYMX3bCSo-NGKDjqRqmyrHK5NgLCLAX53tXzQtkTnA4nWhzYl2SiRynl-6T5FaK9LT-v_SVcfjMyFnYRSDYNzfRIGTkwLRCVDe3Y4DxBLcA
+
+{
+    "id": "sub_1715683207270",
+    "type": "RUNNABLE",
+    "name": "001",
+    "description": "",
+    "disabled": false,
+    "eventTopicId": "deployment.request.pre",
+    "subscriberId": "temporary-value",
+    "blocking": false,
+    "contextual": false,
+    "criteria": "",
+    "runnableType": "extensibility.vro",
+    "runnableId": "2bc5ffd4-86d8-457b-a153-e176cede3c48",
+    "timeout": 0,
+    "priority": 10,
+    "recoverRunnableType": null,
+    "recoverRunnableId": null,
+    "constraints": {
+        "projectId": null
+    }
+}
+
+Compute Reservation
+
+{
+    "id": "sub_1715683492038",
+    "type": "RUNNABLE",
+    "name": "002",
+    "description": "",
+    "disabled": false,
+    "eventTopicId": "compute.reservation.pre",
+    "subscriberId": "temporary-value",
+    "blocking": true,
+    "contextual": false,
+    "criteria": "",
+    "runnableType": "extensibility.vro",
+    "runnableId": "2bc5ffd4-86d8-457b-a153-e176cede3c48",
+    "timeout": 0,
+    "priority": 10,
+    "recoverRunnableType": null,
+    "recoverRunnableId": null,
+    "constraints": {
+        "projectId": null
+    }
+}
+
+Compute Allocation
+
+{
+    "id": "sub_1715683619485",
+    "type": "RUNNABLE",
+    "name": "003",
+    "description": "",
+    "disabled": false,
+    "eventTopicId": "compute.allocation.pre",
+    "subscriberId": "temporary-value",
+    "blocking": true,
+    "contextual": false,
+    "criteria": "",
+    "runnableType": "extensibility.vro",
+    "runnableId": "2bc5ffd4-86d8-457b-a153-e176cede3c48",
+    "timeout": 0,
+    "priority": 10,
+    "recoverRunnableType": null,
+    "recoverRunnableId": null,
+    "constraints": {
+        "projectId": null
+    }
+}
+
+Network Configure
+
+{
+    "id": "sub_1715683689261",
+    "type": "RUNNABLE",
+    "name": "004",
+    "description": "",
+    "disabled": false,
+    "eventTopicId": "network.configure",
+    "subscriberId": "temporary-value",
+    "blocking": true,
+    "contextual": false,
+    "criteria": "",
+    "runnableType": "extensibility.vro",
+    "runnableId": "2bc5ffd4-86d8-457b-a153-e176cede3c48",
+    "timeout": 0,
+    "priority": 10,
+    "recoverRunnableType": null,
+    "recoverRunnableId": null,
+    "constraints": {
+        "projectId": null
+    }
+}
