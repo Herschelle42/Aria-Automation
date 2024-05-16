@@ -6,3 +6,21 @@ $uri = "https://$($vraServer)/event-broker/api/subscriptions?page=0&size=20&%24f
 $response = Invoke-WebRequest -Method $method -Uri $uri -Headers $vRAheaders
 ($response.content | ConvertFrom-Json).Content | Select eventTopicId, name,priority, blocking | sort Name
 
+<# 
+Exported as csv
+"eventTopicId","name","priority","blocking"
+"compute.reservation.pre","01 ComputeReservationPre - kvs_deployment_creation1","10","True"
+"compute.allocation.pre","02 ComputeAllocation - Set Resource Custom Name - BLOCKING","10","True"
+"compute.allocation.pre","03 ComputeAllocation - Save Resource Names - BLOCKING","20","True"
+"network.configure","04 NetworkConfigure - Insert IP Addresses - BLOCKING","10","True"
+"compute.provision.post","05 ComputePostProvision - Apply NSX Security Tags","10","True"
+"compute.provision.post","06 ComputePostProvision - Linux - Base Post Build Steps - BLOCKING","20","True"
+"compute.provision.post","06 ComputePostProvision - Windows - Base Post Build Steps - BLOCKING","20","True"
+"compute.removal.post","50 Linux IaaS Compute Disposing","10","True"
+"network.removal.post","50 NetworkPostRemoval - Cleanup Resource Names - BLOCKING","10","False"
+"compute.removal.post","50 Windows IaaS Compute Disposing","10","True"
+"compute.removal.post","51 ComputePostRemoval - Release IP Addresses","10","False"
+"compute.removal.post","52 ComputeRemovalPost - Delete Computer AD Object","10","False"
+"compute.provision.post","ComputePostProvision - Dump - BLOCKING","10","True"
+"deployment.request.pre","DeploymentRequested - Dump","10","False"
+#>
