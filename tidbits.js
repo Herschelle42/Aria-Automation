@@ -47,3 +47,18 @@ resourceElement.setContentFromMimeAttachment(mimeAttachment);
 System.warn('eventTopicId: ' + System.getContext().getParameter("__metadata_eventTopicId"));
 System.warn('targetType:   ' + System.getContext().getParameter("__metadata_targetType"));
 
+
+/*WF Dump Properties*/
+//Displays the eventTopic this WF is running at
+System.warn('eventTopidId: ' + System.getContext().getParameter("__metadata_eventTopicId"));
+System.warn('targetType:   ' + System.getContext().getParameter("__metadata_targetType"));
+
+System.log("inputProperties:");
+System.log(JSON.stringify(inputProperties, null, 2));
+
+System.log("Parameters:");
+var parameterNames = System.getContext().parameterNames();
+for each ( var parameter in parameterNames) {
+    System.log("   " + parameter + " : " + System.getContext().getParameter(parameter));
+}
+
