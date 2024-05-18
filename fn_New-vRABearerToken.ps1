@@ -70,6 +70,11 @@ Begin {
         }
         "__AllParameterSets" {}
     }
+
+    Write-Verbose "$(Get-Date) Using Powershell version: $($PSVersionTable.PSVersion.Major)"
+    if ($PSVersionTable.PSVersion.Major -le 5 -and $SkipCertificateCheck) {
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+    }
 }
 
 Process {
@@ -106,11 +111,14 @@ Process {
     #For troubleshooting only, do NOT leave uncommented else your password will be displayed
     #Write-Verbose "$(Get-Date) body: $($body)"
 
-
     try
     {
         $response = $null
-        $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck:$SkipCertificateCheck
+        if ($PSVersionTable.PSVersion.Major -gt 5) {
+            $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck:$SkipCertificateCheck
+        } else {
+            $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body
+        }
     }
     catch 
     {
@@ -121,7 +129,8 @@ Process {
         throw
     }
 
-Write-Verbose "$(Get-Date) Refresh Token received."
+Write-Verbose "$(Get-Date) Refresh Token received:"
+Write-Verbose "$(Get-Date) $($response | ConvertTo-Json)"
 $newBody = @"
 { 
     refreshToken: "$($response.refresh_token)" 
@@ -137,7 +146,12 @@ $newBody = @"
     try
     {
         $response = $null
-        $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $newBody -SkipCertificateCheck:$SkipCertificateCheck
+        if ($PSVersionTable.PSVersion.Major -gt 5) {
+            $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $newBody -SkipCertificateCheck:$SkipCertificateCheck
+        } else {
+            $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $newBody
+        }
+
     }
     catch 
     {
@@ -149,13 +163,14 @@ $newBody = @"
     }
 
     Write-Verbose "$(Get-Date) Token received. Add the retrieved Bearer token to the headers"
+    Write-Verbose "$(Get-Date) $($response | ConvertTo-json)"
     $bearer_token = $response.token
     $headers.Add("Authorization", "Bearer $($bearer_token)")
 
-    Write-Verbose "Copy Bearer token to system Clipboard."
+    Write-Verbose "$(Get-Date) Copy Bearer token to system Clipboard."
     Set-Clipboard -Value $headers.Authorization
 
-    Write-Verbose "Create dynamic global variables"
+    Write-Verbose "$(Get-Date) Create dynamic global variables"
     $variableName = "bearer_$($ComputerName.Split(".")[0])"
     New-Variable -Name $variableName -Scope Global -Value $headers.Authorization -Force
 
@@ -165,7 +180,7 @@ $newBody = @"
 }
 
 End {
-    Write-Verbose "End"
+    Write-Verbose "$(Get-Date) End"
 }
 
 }
