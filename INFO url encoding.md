@@ -11,5 +11,5 @@
 | '         | %27         | apostrophe           |
 | *         | %2A         | asterix              |
 | ^         | %5E         | carat                |
-| ~         |             | tilde                |
+| ~         |             | tilde - may not need to be encoded               |
 | \|        | %7C         | pipe                 |
