@@ -62,8 +62,50 @@ $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body 
 
 $executionId = $response.id
 
-#TODO: Monitor status of Workflow and wait for it to complete.
+#Monitor status of Workflow and wait for it to complete.
+<#
+#TODO: Need to updated the request tracking to be the one for vRO not vRA API :)
 
+$requestCounter = 0
+$requestLimit = 10
+
+if($response.state = "running") {
+    $requestInProgress = $true
+} else { 
+    $requestInProgress = $false
+}
+
+while($requestInProgress -and $requestCounter -lt $requestLimit) {
+    $requestCounter++
+
+    Write-Verbose "$(Get-Date) In progress..." -Verbose
+    Start-Sleep -Milliseconds 300
+
+    #track the request
+    $method = "Get"
+    $uri = "https://$($vraServer)/iaas/api/request-tracker/$($executionId)"
+    try
+    {
+        Write-Output "[INFO] $(Get-Date) Checking status"
+        $responseRequest = $null
+        $responseRequest = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers
+    }
+    catch 
+    {
+        Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+        Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+        Write-Output "Exception:            $($_.Exception)"
+        Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+        throw
+    }
+
+    if($responseRequest.st -ne "INPROGRESS") {
+        $requestInProgress = $false
+    }
+}
+
+Write-Output "[INFO] $(Get-Date) Final request status: $($responseRequest.status)"
+#>
 
 
 $uri = "https://$($vraServer)/vco/api/workflows/$($workflowId)/executions/$($executionId)/syslogs"
