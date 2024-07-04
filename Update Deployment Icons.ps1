@@ -223,6 +223,9 @@ $body = @"
 $VerbosePreference = "SilentlyContinue"
 
 Return
+
+#region --- Update icons
+
 <#
   Update other deployments using the $allDeploymentList
 #>
@@ -237,14 +240,14 @@ foreach($deployment in $noIconDeployments) {
     $counter++
     
     $vm = $null
-    $useIconId = $null
+    $iconId = $null
     $machineName = $null
 
     $machineName = $deployment.resources | ? { $_.type -eq "Cloud.vSphere.Machine" } | Select -ExpandProperty name
     $vm = $vmlist | ? { $_.name -eq $machineName }
     
     if($vm.guest_OS) {
-        $useIconId = switch($vm.guest_OS) {
+        $iconId = switch($vm.guest_OS) {
             {$_ -match "Windows.*Server"} {
                 Write-Verbose "$($vm.guest_OS) - Windows Server" -Verbose
                 "020b90f7-af7a-31b5-a01c-350661a72136"
@@ -275,7 +278,7 @@ foreach($deployment in $noIconDeployments) {
                 break;
             }
             {$_ -match "FreeBSD"} {
-                "9a717f08-cf30-372c-9a0d-ede650536c4c"
+                "6d9e4e48-4257-3369-bba9-0e9fd936903b"
                 break;
             }
             {$_ -match "Solaris"} {
@@ -297,7 +300,7 @@ foreach($deployment in $noIconDeployments) {
             }
         }
 
-        if($useIconId) {
+        if($iconId) {
 
     #create json body as here string. do _not_ indent
 $body = @"
@@ -305,7 +308,7 @@ $body = @"
         "actionId": "$($actionId)",
         "inputs": {
             "Name": "$($deployment.name)",
-            "Icon": "$($useIconId)"
+            "Icon": "$($iconId)"
         }
     }
 "@
@@ -337,3 +340,73 @@ $body = @"
         Write-Warning "No OS detected!"
     }
 }
+
+#endregion --------------------------------------------------------------------
+
+Return
+
+#region --- update icon from one to another -----------------------------------
+
+#FreeBSD
+$oldIconId = "9a717f08-cf30-372c-9a0d-ede650536c4c"
+$iconId = "6d9e4e48-4257-3369-bba9-0e9fd936903b"
+
+#Solaris
+$oldIconId = "b75774ca-ee2c-3caf-bc30-e7a70cd718ab"
+$iconId = "dd047a8f-729a-3880-9cb8-91b427dbca3b"
+
+
+#which deployments to target?
+$theseDeployments = $allDeploymentList | ? { $_.iconId -eq $oldIconId }
+
+$actionId = "Deployment.EditDeployment"
+
+$counter=1
+foreach($deployment in $theseDeployments) {
+    Write-Output "$(Get-Date) [INFO] Processing $($counter) of $($theseDeployments.Count) - $($deployment.name)"
+    $counter++
+
+    #create json body as here string. do _not_ indent
+$body = @"
+    {
+        "actionId": "$($actionId)",
+        "inputs": {
+            "Name": "$($deployment.name)",
+            "Icon": "$($iconId)"
+        }
+    }
+"@
+        
+        #execute the request
+        $method = "POST"
+        $uri = "https://$($vraServer)/deployment/api/deployments/$($deployment.id)/requests?apiVersion=2020-08-25"
+        try
+        {
+            Write-Output "[INFO] $(Get-Date) Updating icon"
+            $responseUpdate = $null
+            $responseUpdate = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body
+            #add a small wait to not DDOS AA8
+            Start-Sleep -Milliseconds 100
+         } catch [System.Net.WebException] {
+        
+            if ($($_.ErrorDetails.Message) -match "No change in the name, description or icon values. Please provide a new name or description or icon!" )
+            {
+                Write-Verbose "$(Get-Date) Icon already changed. No action required." -Verbose
+            } else {
+                Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                Write-Output "Exception:            $($_.Exception)"
+                Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+                throw
+            }
+        } catch {
+            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+            Write-Output "Exception:            $($_.Exception)"
+            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+            throw
+        }
+
+}
+
+#endregion --------------------------------------------------------------------
