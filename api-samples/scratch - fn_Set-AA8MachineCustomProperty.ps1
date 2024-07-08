@@ -52,7 +52,9 @@ Param(
     [AllowEmptyString()]
     [string]$Value,
 
-    #Path to the file to use as input parameters for the name, key and value.
+    #Path to the file to use as input parameters for the name, id, key and value.
+    #If id found, this will make it quicker as we do not have to look it up by name
+    #TODO: Validate path
     [Parameter(Mandatory,ParameterSetName="File")]
     [Alias("Path")]
     [string]$FilePath
@@ -165,7 +167,7 @@ $newBody = @"
     $bearer_token = $response.token
     $headers.Add("Authorization", "Bearer $($bearer_token)")
 
-
+    $logfile = "Set-AA8MachineCustomProperty.log"
 
 }
 
@@ -254,9 +256,11 @@ Process {
                 #have to test for empty string as this will be treated as $null
                 } elseif ($Value.Length -eq 0) {
                     Write-Verbose "Removing Custom Property: $Key"
+                    "$(Get-Date) $($name) Remove Custom Property: $($Key)" | Out-File -FilePath $logfile -Append
                     $hash.customProperties.$($Key) = $null
                 } else {
                     Write-Verbose "Custom Property: $($Key) will be updated from: $($machine.customProperties.$($Key)) to: $($Value)"
+                    "$(Get-Date) $($name) Custom Property: $($Key) will be updated from: $($machine.customProperties.$($Key)) to: $($Value)" | Out-File -FilePath $logfile -Append
                     $hash.customProperties.$($Key) = $Value
                 }
             } else {
@@ -264,7 +268,8 @@ Process {
                     Write-Verbose "Value is empty. Not action will be taken."
                     Continue
                 } else {
-                    Write-Verbose "New custom property to be added: $($Key):$($Value)"
+                    Write-Verbose "Add Custom Property: $($Key):$($Value)"
+                    "$(Get-Date) $($name) Add Custom Property: $($Key):$($Value)" | Out-File -FilePath $logfile -Append
                     $hash.customProperties | Add-Member -MemberType NoteProperty -Name $Key -Value $Value
                 }
             }
@@ -291,6 +296,26 @@ Process {
                 throw
             }
         }
+
+    } elseif($PSCmdlet.ParameterSetName -eq "File") {
+        $data = Import-Csv -Path $FilePath
+        
+        #TODO: add detection of Id property
+        #simply assuming there is one for now
+        $updateList = $data | Group-Object Id
+
+        $counter=1
+        foreach($group in $updateList) {
+            Write-Verbose "$(Get-Date) Processing $($counter) of $($updateList.Count) - $($group.group[0].name)"
+            $counter++
+
+            $machineId = $group.Name
+
+            #TODO: Look at Custom Properties script for how I created the bulk change update
+
+        }
+        
+
     } else {
         Write-Warning "TODO: add logic for other parameter sets"
     }
