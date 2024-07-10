@@ -57,8 +57,10 @@ Param(
     #TODO: Validate path
     [Parameter(Mandatory,ParameterSetName="File")]
     [Alias("Path")]
-    [string]$FilePath
+    [string]$FilePath,
 
+    [Parameter(Mandatory=$false)]
+    [string]$logfile = "Set-AA8MachineCustomProperty.log"
 
 
 )
@@ -167,7 +169,7 @@ $newBody = @"
     $bearer_token = $response.token
     $headers.Add("Authorization", "Bearer $($bearer_token)")
 
-    $logfile = "Set-AA8MachineCustomProperty.log"
+    
 
 }
 
@@ -202,14 +204,27 @@ Process {
                     Write-Output "Error Message:        $($_.ErrorDetails.Message)"
                     Write-Output "Exception:            $($_.Exception)"
                     Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
-                    throw
+                    #throw
                 }
+                Continue
+            } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
+                if ($($_.Exception.Message) -eq "Response status code does not indicate success: 502 (Bad Gateway)." ) 
+                {
+                    Write-Warning "$($_.Exception.Message) - Moving to next item"
+                } else {
+                    Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                    Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                    Write-Output "Exception:            $($_.Exception)"
+                    Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+                }
+                Continue
             } catch {
                 Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
                 Write-Output "Error Message:        $($_.ErrorDetails.Message)"
                 Write-Output "Exception:            $($_.Exception)"
                 Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
-                throw
+                #throw
+                Continue
             }
 
             #Convert the response to the same object type as returned by id lookup.
@@ -249,18 +264,17 @@ Process {
             if([bool]($hash.customProperties.PSObject.Properties.Name -eq $($Key))) {
                 Write-Verbose "Custom Property: $($Key) already exists"
                 if($machine.customProperties.$($Key) -eq $Value -and $Value.Length -gt 0) {
-                    Write-Warning "Custom Property value is already: $($machine.customProperties.$($Key))"
-                    Write-Warning "No change required. Skipping update"
+                    Write-Warning "Custom Property [$($Key)] value is already [$($machine.customProperties.$($Key))]. Skipping update."
                     Continue
 
                 #have to test for empty string as this will be treated as $null
                 } elseif ($Value.Length -eq 0) {
-                    Write-Verbose "Removing Custom Property: $Key"
-                    "$(Get-Date) $($name) Remove Custom Property: $($Key)" | Out-File -FilePath $logfile -Append
+                    Write-Verbose "Removing Custom Property: [$($Key)]"
+                    "$(Get-Date) $($name) Removing Custom Property: [$($Key)]" | Out-File -FilePath $logfile -Append
                     $hash.customProperties.$($Key) = $null
                 } else {
-                    Write-Verbose "Custom Property: $($Key) will be updated from: $($machine.customProperties.$($Key)) to: $($Value)"
-                    "$(Get-Date) $($name) Custom Property: $($Key) will be updated from: $($machine.customProperties.$($Key)) to: $($Value)" | Out-File -FilePath $logfile -Append
+                    Write-Verbose "Update Custom Property: [$($Key)] from [$($machine.customProperties.$($Key))] to [$($Value)]"
+                    "$(Get-Date) $($name) Update Custom Property: [$($Key)] from [$($machine.customProperties.$($Key))] to [$($Value)]" | Out-File -FilePath $logfile -Append
                     $hash.customProperties.$($Key) = $Value
                 }
             } else {
@@ -268,8 +282,8 @@ Process {
                     Write-Verbose "Value is empty. Not action will be taken."
                     Continue
                 } else {
-                    Write-Verbose "Add Custom Property: $($Key):$($Value)"
-                    "$(Get-Date) $($name) Add Custom Property: $($Key):$($Value)" | Out-File -FilePath $logfile -Append
+                    Write-Verbose "Add Custom Property: [$($Key):$($Value)]"
+                    "$(Get-Date) $($name) Add Custom Property: [$($Key):$($Value)]" | Out-File -FilePath $logfile -Append
                     $hash.customProperties | Add-Member -MemberType NoteProperty -Name $Key -Value $Value
                 }
             }
