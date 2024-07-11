@@ -55,12 +55,13 @@ Param(
     #Path to the file to use as input parameters for the name, id, key and value.
     #If id found, this will make it quicker as we do not have to look it up by name
     #TODO: Validate path
+    #TODO: implement code to hand a file
     [Parameter(Mandatory,ParameterSetName="File")]
     [Alias("Path")]
     [string]$FilePath,
 
     [Parameter(Mandatory=$false)]
-    [string]$logfile = "Set-AA8MachineCustomProperty.log"
+    [string]$LogFile = "Set-AA8MachineCustomProperty.log"
 
 
 )
