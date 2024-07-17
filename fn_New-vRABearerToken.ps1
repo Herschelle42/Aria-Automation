@@ -58,14 +58,22 @@ Param(
 )
 
 Begin {
+
+    Write-Verbose "$(Get-Date) Protocol:         $($Protocol)"
+    Write-Verbose "$(Get-Date) ComputerName:     $($ComputerName)"
+    Write-Verbose "$(Get-Date) Port:             $($Port)"
+    Write-Verbose "$(Get-Date) Domain:           $($Domain)"
+    Write-Verbose "$(Get-Date) Tenant:           $($tenant)"
+    Write-Verbose "$(Get-Date) Skip Cert Check:  $($SkipCertificateCheck)"
+
     switch ($PSCmdlet.ParameterSetName) {
         "ByCredential" {
-            Write-Verbose "[INFO] Using Credential: $($Credential.UserName)"
+            Write-Verbose "$(Get-Date) Using Credential: $($Credential.UserName)"
             [string]$username = $Credential.UserName
             [string]$UnsecurePassword = $Credential.GetNetworkCredential().Password
         }
         "ByUsername" {
-            Write-Verbose "[INFO] Using username and password: $($Username)"
+            Write-Verbose "$(Get-Date) Using username and password: $($Username)"
             [string]$UnsecurePassword = (New-Object System.Management.Automation.PSCredential('username', $Password)).GetNetworkCredential().Password
         }
         "__AllParameterSets" {}
@@ -101,13 +109,13 @@ Process {
     $baseUrl = "https://$($ComputerName)"
     #$uri = "$($baseUrl)/identity/api/tokens"
     $uri = "$($baseUrl)/csp/gateway/am/api/login?access_token"
-    Write-Verbose "$(Get-Date) uri: $($uri)"
+    Write-Verbose "$(Get-Date) method: $($method)"
+    Write-Verbose "$(Get-Date) uri:    $($uri)"
     #https://kb.vmware.com/s/article/89129
 
-    Write-Verbose "$(Get-Date) Request a token from vRA"
+    Write-Verbose "$(Get-Date) Request an access token"
 
-    Write-Verbose "$(Get-Date) method: $($method)"
-    Write-Verbose "$(Get-Date) headers: $($headers)"
+    #Write-Verbose "$(Get-Date) headers: $($headers | Out-String)"
     #For troubleshooting only, do NOT leave uncommented else your password will be displayed
     #Write-Verbose "$(Get-Date) body: $($body)"
 
@@ -142,7 +150,7 @@ $newBody = @"
     $uri = "$($baseUrl)/iaas/api/login"
     Write-Verbose "$(Get-Date) uri: $($uri)"
 
-    Write-Verbose "$(Get-Date) Request a token from vRA"
+    Write-Verbose "$(Get-Date) Login"
     try
     {
         $response = $null
