@@ -163,7 +163,7 @@ function Search-vRO8ScriptItem
         
         Write-Verbose "$(Get-Date) Tags: $($Tags)"
 
-        Write-Verbose "Using Powershell version: $($PSVersionTable.PSVersion.Major)"
+        Write-Verbose "$(Get-Date) Using Powershell version: $($PSVersionTable.PSVersion.Major)"
         if ($PSVersionTable.PSVersion.Major -le 5 -and $SkipCertificateCheck) {
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
         }
@@ -248,7 +248,7 @@ $newBody = @"
         $bearer_token = $response.token
         $headers.Add("Authorization", "Bearer $($bearer_token)")
 
-        Write-Verbose "Headers: $($headers | Out-String)"
+        Write-Verbose "$(Get-Date) Headers: $($headers | Out-String)"
 
         #If a port is defined, updated the server uri.
         $serverUri = $null
@@ -258,7 +258,7 @@ $newBody = @"
           $serverUri = "$($protocol)://$($ComputerName)"
         }
         $apiUri = "$($serverUri)/vco/api"
-        Write-Verbose "Server API Uri: $($apiUri)"
+        Write-Verbose "$(Get-Date) Server API Uri: $($apiUri)"
        
         <#
         vRO 7.x requires tls 1.2 to work, otherwise will receive the error:
@@ -267,22 +267,22 @@ $newBody = @"
         #>
         if (-not ("Tls12" -in  (([System.Net.ServicePointManager]::SecurityProtocol).ToString() -split ", ")))
         {
-            Write-Verbose "Adding Tls 1.2 to security protocol"
+            Write-Verbose "$(Get-Date) Adding Tls 1.2 to security protocol"
             [System.Net.ServicePointManager]::SecurityProtocol += [System.Net.SecurityProtocolType]::Tls12
         }
 
         function intGet-ActionScripts
         {
-            Write-Verbose "Get Actions"
+            Write-Verbose "$(Get-Date) Get Actions"
 
             $method = "GET"
             $uri = "$($apiUri)/actions"
             $result = $null
 
-            Write-Verbose "uri: $($uri)"
-            Write-Verbose "method: $($method)"
-            Write-Verbose "skipcert: $($SkipCertificateCheck)"
-            Write-Verbose "headers: $($headers | Out-String)"
+            Write-Verbose "$(Get-Date) uri: $($uri)"
+            Write-Verbose "$(Get-Date) method: $($method)"
+            Write-Verbose "$(Get-Date) skipcert: $($SkipCertificateCheck)"
+            Write-Verbose "$(Get-Date) headers: $($headers | Out-String)"
 
             try {
                 if ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -292,15 +292,15 @@ $newBody = @"
 
                 }
             } catch {
-                    Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
-                    Write-Output "Error Message:        $($_.ErrorDetails.Message)"
-                    Write-Output "Exception:            $($_.Exception)"
-                    Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
-                    throw
+                Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                Write-Output "Exception:            $($_.Exception)"
+                Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+                throw
             }
 
 
-            Write-Verbose "Create a new flat custom object for easier manipulation"
+            Write-Verbose "$(Get-Date) Create a new flat custom object for easier manipulation"
             $item = $null
             $itemList = foreach ($item in $result.link){
     
@@ -317,12 +317,12 @@ $newBody = @"
   
             }
 
-            Write-Verbose "Get each script element"
+            Write-Verbose "$(Get-Date) Get each script element"
             $item = $null
             foreach ($item in $itemList)
             {
-                Write-Verbose "Action: $($item.name)"
-                Write-Verbose "Path: $($item.fqn)"
+                Write-Verbose "$(Get-Date) Action: $($item.name)"
+                Write-Verbose "$(Get-Date) Path: $($item.fqn)"
                 try {
                     $result = $null
                     if ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -335,7 +335,7 @@ $newBody = @"
         
                     if ($($_.Exception.Message) -eq "The remote server returned an error: (400) Bad Request." )
                     {
-                        Write-Verbose "[ERROR] !!! $($_.Exception.Message)"
+                        Write-Verbose "$(Get-Date) [ERROR] !!! $($_.Exception.Message)"
                         <# Undecided how we surface this up.
                         $hash=[ordered]@{}
                         $hash.Name = $item.name
@@ -358,11 +358,11 @@ $newBody = @"
                 #Is this a regex search or a simple text search.
                 if ($regex) 
                 {
-                    Write-Verbose "Regex search"
+                    Write-Verbose "$(Get-Date) Regex search"
                     try {
                         if ($linesFound = $result.script.Split("`n") | Select-String -Pattern $pattern | Select-Object LineNumber, Line)
                         {
-                            Write-Verbose "Lines found: $($linesFound.count)"
+                            Write-Verbose "$(Get-Date) Lines found: $($linesFound.count)"
                             $hash=[ordered]@{}
                             $hash.Type="Action"
                             $hash.Name = $item.name
@@ -375,7 +375,7 @@ $newBody = @"
                     #Catch when the item is empty
                     } catch [System.Management.Automation.RuntimeException] {
                         if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
-                            Write-Verbose "Contains no script."
+                            Write-Verbose "$(Get-Date) Contains no script."
                         } else {
                             Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
                             Write-Output "Error Message:        $($_.ErrorDetails.Message)"
@@ -392,12 +392,12 @@ $newBody = @"
                     }
 
                 } else {
-                    Write-Verbose "Simple search"
+                    Write-Verbose "$(Get-Date) Simple search"
 
                     try {
                         if ($linesFound = $result.script.Split("`n") | Select-String -SimpleMatch $pattern | Select-Object LineNumber, Line)
                         {
-                            Write-Verbose "Lines found: $($linesFound.count)"
+                            Write-Verbose "$(Get-Date) Lines found: $($linesFound.count)"
                             $hash=[ordered]@{}
                             $hash.Type="Action"
                             $hash.Name = $item.name
@@ -410,7 +410,7 @@ $newBody = @"
                     #Catch when the item is empty
                     } catch [System.Management.Automation.RuntimeException] {
                         if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
-                            Write-Verbose "Contains no script."
+                            Write-Verbose "$(Get-Date) Contains no script."
                         } else {
                             Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
                             Write-Output "Error Message:        $($_.ErrorDetails.Message)"
@@ -431,22 +431,22 @@ $newBody = @"
 
         function intGet-WorkflowScripts
         {
-            Write-Verbose "Get Workflows"
+            Write-Verbose "$(Get-Date) Get Workflows"
             $method = "GET"
             
             $uri = "$($apiUri)/workflows?maxResult=2147483647&startIndex=0&queryCount=false"
 
             if($Tags) {
-                Write-Verbose "Adding Tags filter"
+                Write-Verbose "$(Get-Date) Adding Tags filter"
                 #In the API the array of strings is comma separated.
                 $uri = "$($uri)&tags=$($tags -join "%2C")"
             }
 
             $result = $null
-            Write-Verbose "uri: $($uri)"
-            Write-Verbose "method: $($method)"
-            Write-Verbose "skipcert: $($SkipCertificateCheck)"
-            Write-Verbose "headers: $($headers | Out-String)"
+            Write-Verbose "$(Get-Date) uri: $($uri)"
+            Write-Verbose "$(Get-Date) method: $($method)"
+            Write-Verbose "$(Get-Date) skipcert: $($SkipCertificateCheck)"
+            Write-Verbose "$(Get-Date) headers: $($headers | Out-String)"
 
             try {
                 if ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -463,7 +463,7 @@ $newBody = @"
                 throw
             }
 
-            Write-Verbose "Create a new flat custom object for easier manipulation"
+            Write-Verbose "$(Get-Date) Create a new flat custom object for easier manipulation"
             $item = $null
             $itemList = foreach ($item in $result.link){
 
@@ -484,14 +484,14 @@ $newBody = @"
   
             }
 
-            Write-Verbose "Get each script element"
+            Write-Verbose "$(Get-Date) Get each script element"
             $item = $null
             foreach ($item in $itemList)
             {
                 #TODO: Remove this hack when fixed - Avi Deployment WF: Cluster Node Replacement is corrupt
                 if($item.id -eq "62307943-f03c-4f5a-80cc-58eb585443e2") { continue }
 
-                Write-Verbose "Workflow: $($item.name)"
+                Write-Verbose "$(Get-Date) Workflow: $($item.name)"
                 try {
                     $wfContent = $null
                     if ($PSVersionTable.PSVersion.Major -gt 5) {
@@ -503,7 +503,7 @@ $newBody = @"
         
                     if ($($_.Exception.Message) -eq "The remote server returned an error: (400) Bad Request." )
                     {
-                        Write-Verbose "[ERROR] !!! $($_.Exception.Message)" -Verbose:$VerbosePreference
+                        Write-Verbose "$(Get-Date) [ERROR] !!! $($_.Exception.Message)" -Verbose:$VerbosePreference
                         <# Undecided how we surface this up.
                         $hash=[ordered]@{}
                         $hash.Name = $item.name
@@ -538,18 +538,18 @@ $newBody = @"
 
                 foreach ($contentItem in $wfContent.'workflow-item' | Where-Object { $_.Script } )
                 {
-                    Write-Verbose "Item Name: $($contentItem.'display-name')"
+                    Write-Verbose "$(Get-Date) Item Name: $($contentItem.'display-name')"
                     $itemPath = "$($item.globalTags.Replace(' ','\'))\$($item.name)"
-                    Write-Verbose "Item Path: $($itemPath)"
+                    Write-Verbose "$(Get-Date) Item Path: $($itemPath)"
         
                     #Is this a regex search or a simple text search.
                     if ($regex) 
                     {
-                        Write-Verbose "Regex search"
+                        Write-Verbose "$(Get-Date) Regex search"
                         try {
                             if ($linesFound = $contentItem.script.value.Split("`n") | Select-String -Pattern $pattern | Select-Object LineNumber, Line)
                             {
-                                Write-Verbose "Lines found: $($linesFound.count)"
+                                Write-Verbose "$(Get-Date) Lines found: $($linesFound.count)"
                                 $hash=[ordered]@{}
                                 $hash.Type="Workflow-$($contentItem.type)"
                                 $hash.Name = $contentItem.'display-name'
@@ -563,7 +563,7 @@ $newBody = @"
                         #Catch when the item is empty
                         } catch [System.Management.Automation.RuntimeException] {
                             if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
-                                Write-Verbose "Contains no script."
+                                Write-Verbose "$(Get-Date) Contains no script."
                             } else {
                                 Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
                                 Write-Output "Error Message:        $($_.ErrorDetails.Message)"
@@ -582,11 +582,11 @@ $newBody = @"
                         }
 
                     } else {
-                        Write-Verbose "Simple search"
+                        Write-Verbose "$(Get-Date) Simple search"
                         try {
                             if ($linesFound = $contentItem.script.value.Split("`n") | Select-String -SimpleMatch $pattern | Select-Object LineNumber, Line)
                             {
-                                Write-Verbose "Lines found: $($linesFound.count)"
+                                Write-Verbose "$(Get-Date) Lines found: $($linesFound.count)"
                                 $hash=[ordered]@{}
                                 $hash.Type="Workflow-$($contentItem.type)"
                                 $hash.Name = $contentItem.'display-name'
@@ -599,7 +599,7 @@ $newBody = @"
                         #Catch when the item is empty
                         } catch [System.Management.Automation.RuntimeException] {
                             if ($_.exception.message -match "You cannot call a method on a null-valued expression.") {
-                                Write-Verbose "Contains no script."
+                                Write-Verbose "$(Get-Date) Contains no script."
                             } else {
                                 Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
                                 Write-Output "Error Message:        $($_.ErrorDetails.Message)"
