@@ -34,6 +34,9 @@ function Search-vROChanges
   Date after which we are looking for updates. Default is 30 days
 .PARAMETER DateTo
   Date before which we are looking for updates. Default is now.
+.PARAMETER Throttle
+  Advanced setting to speed up retrieval of Action audit data. Default is 10. Be careful setting
+  this too high as this will impact Aria Automation with concurrent API calls.
 .EXAMPLE
   Get changes in the last 7 days
 
@@ -42,7 +45,17 @@ function Search-vROChanges
   [array]$result = search-vROScriptItem -ComputerName "vra.corp.local" -Credential $vroCredential -DateFrom "2024-07-29" -Type Workflow -SkipCertificateCheck
   $result[0]
 
-  #TODO: Add the output of the example
+  id          : 452cae92-a61b-41af-8747-b846ef284076
+  name        : findVcVmByVcAndVmUuid
+  description : Find vCenter VM by vCenter instance ID and VM UUID.
+              Throws error when:
+              - No vCenter host configuration is found with the given ID
+              - No VM is found with the given ID
+  fqn         : com.vmware.vra.xaas/findVcVmByVcAndVmUuid
+  version     : 1.0.0
+  href        : https://vra8-fielddemo.cmbu.local:443/vco/api/actions/452cae92-a61b-41af-8747-b846ef284076/
+  rel         : action
+  updatedAt   : 1722175370715
 
 .INPUTS
    [String]
@@ -59,8 +72,14 @@ function Search-vROChanges
   - Add paging for Workflows
   - Add paging for Actions - not possible atm, as no parameters in API for actions
   - Add foreach parallel to the search of audit-logs for Actions (if using Powershell 7.x +) as they have to go through every Action to get the audit-logs
-  - Add Configuration items changed
-  - Add Resource Elements items changed
+    example:   $itemlist | Foreach-Object -Parallel { <peform operations here> }  -ThrottleLimit 10
+  - Add Package changed?
+  - Add Policies?
+  - Add Resource Elements has updatedAt
+  - Add Configuration elements
+  - Add Templates?
+  - Add Custom Forms?
+
 #>
 
 #Powershell 7+
@@ -108,25 +127,30 @@ function Search-vROChanges
         [DateTime]$DateFrom = (Get-Date).AddDays(-30),   #Saturday, 29 June 2024 10:02:28 AM
 
         [Parameter(Mandatory=$false)]
-        [DateTime]$DateTo = (Get-Date)                   #Monday, 29 July 2024 10:02:14 AM
+        [DateTime]$DateTo = (Get-Date),                   #Monday, 29 July 2024 10:02:14 AM
 
+        [Parameter(Mandatory=$false)]
+        [int]$Throttle=10
         
     )
 
     Begin
     {
 
-        Write-Verbose "$(Get-Date) ParameterSet: $($PSCmdlet.ParameterSetName)"
-        Write-Verbose "$(Get-Date) Protocol: $($Protocol)"
-        Write-Verbose "$(Get-Date) ComputerName: $($ComputerName)"
-        Write-Verbose "$(Get-Date) Port: $($Port)"
+        Write-Verbose "$(Get-Date) ParameterSet:         $($PSCmdlet.ParameterSetName)"
+        Write-Verbose "$(Get-Date) Protocol:             $($Protocol)"
+        Write-Verbose "$(Get-Date) ComputerName:         $($ComputerName)"
+        Write-Verbose "$(Get-Date) Port:                 $($Port)"
         Write-Verbose "$(Get-Date) SkipCertificateCheck: $($SkipCertificateCheck)"
+        Write-Verbose "$(Get-Date) Type:                 $($Type)"
+        Write-Verbose "$(Get-Date) Tags:                 $($Tags)"
+        Write-Verbose "$(Get-Date) Throttle:             $($Throttle)"
 
         #TODO: Change to a switch?
         #TODO: Add check for an existing PowervRA connection. can then skip the authentication steps
         #--- extract username and password from credential
         if ($PSCmdlet.ParameterSetName -eq "ByCredential") {
-            Write-Verbose "$(Get-Date) Credential: $($Credential | Out-String)"
+            Write-Verbose "$(Get-Date) Credential:           $($Credential | Out-String)"
 
             $shortUsername = $Credential.UserName.Split("@")[0]
             $UnsecurePassword = $Credential.GetNetworkCredential().Password
@@ -140,12 +164,9 @@ function Search-vROChanges
             throw "Unable to determine parameter set."
         }
 
-        Write-Verbose "$(Get-Date) Username: $($Username)"
-        Write-Verbose "$(Get-Date) shortUsername: $($shortUsername)"
-        Write-Verbose "$(Get-Date) vRADomain: $($vRADomain)"
-
-        Write-Verbose "$(Get-Date) Type: $($Type)"
-        Write-Verbose "$(Get-Date) Tags: $($Tags)"
+        Write-Verbose "$(Get-Date) Username:             $($Username)"
+        Write-Verbose "$(Get-Date) shortUsername:        $($shortUsername)"
+        Write-Verbose "$(Get-Date) vRADomain:            $($vRADomain)"
 
         #Convert Dates to unix time for comparison.
         $DateFromUNIX = [int64](Get-Date -Date $DateFrom -UFormat %s) * 1000
@@ -253,8 +274,6 @@ $newBody = @"
 
             Write-Verbose "$(Get-Date) uri: $($uri)"
             Write-Verbose "$(Get-Date) method: $($method)"
-            Write-Verbose "$(Get-Date) skipcert: $($SkipCertificateCheck)"
-            Write-Verbose "$(Get-Date) headers: $($headers | Out-String)"
 
             try {
                 $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
@@ -269,8 +288,7 @@ $newBody = @"
 
             Write-Verbose "$(Get-Date) Create a new flat custom object for easier manipulation"
             $item = $null
-            $itemList = foreach ($item in $result.link){
-    
+            $itemList = foreach ($item in $result.link){    
                 $hash = [ordered]@{}
                 foreach ($attrib in $item.attributes)
                 {
@@ -278,7 +296,7 @@ $newBody = @"
                 }#end foreach attrib
                 $hash.href = $item.href
                 $hash.rel = $item.rel
-				$hash.Script = $null
+                $hash.updatedAt = $null
                 $object = new-object PSObject -property $hash 
                 $object
   
@@ -286,9 +304,9 @@ $newBody = @"
             Write-Verbose "$(Get-Date) Total Actions returned: $($itemList.Count)"
 
             Write-Verbose "$(Get-Date) Get Audit logs"
-            $item = $null
-            foreach ($item in $itemList)
-            {
+            $itemlist | Foreach-Object -Parallel { 
+                $item = $_
+                
                 $actionId = $item.id
                 Write-Verbose "$(Get-Date) Name: $($item.name)"
                 Write-Verbose "$(Get-Date) Id  : $($item.id)"
@@ -296,13 +314,14 @@ $newBody = @"
                 
                 try {
                     $result = $null
-                    $uri = "$($apiUri)/audit-logs?fetchLimit=100&severity=info&fromDate=$($DateFromUNIX)&toDate=$($DateToUNIX)&objectId=$($actionId)"
-                    $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $headers -SkipCertificateCheck:$SkipCertificateCheck
+                    $method = "Get"
+                    $uri = "$($using:apiUri)/audit-logs?fetchLimit=100&severity=info&fromDate=$($using:DateFromUNIX)&toDate=$($using:DateToUNIX)&objectId=$($actionId)"
+                    $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $using:headers -SkipCertificateCheck:$using:SkipCertificateCheck
                 } catch [System.Net.WebException] {
         
                     if ($($_.Exception.Message) -eq "The remote server returned an error: (400) Bad Request." )
                     {
-                        Write-Verbose "$(Get-Date) [ERROR] !!! $($_.Exception.Message)"
+                        Write-Error "$(Get-Date) [ERROR] !!! $($_.Exception.Message)"
                         <# Undecided how we surface this up.
                         $hash=[ordered]@{}
                         $hash.Name = $item.name
@@ -313,25 +332,27 @@ $newBody = @"
                         $object
                         #>
                     } else {
-                        Write-Output "Action: $($item.id) ($($item.name))"
+                        Write-Error "Action: $($item.id) ($($item.name))"
                         throw
                     }
 
                 } catch {
-                    Write-Output "Action: $($item.id) ($($item.name))"
+                    Write-Error "Action: $($item.id) ($($item.name))"
                     throw
                 }
 
                 if($result.events.Count -gt 0) {
-                    [array]$logList = $result.events | Select -ExpandProperty audit-log | Where-Object { $_.'time-stamp-val' -gt $DateFromUNIX -and $_.'time-stamp-val' -lt $DateToUNIX -and $_.'short-description' -match "Action content saved|Action saved|Action created" }
+                    [array]$logList = $result.events | Select-Object -ExpandProperty audit-log | Where-Object { $_.'time-stamp-val' -gt $using:DateFromUNIX -and $_.'time-stamp-val' -lt $using:DateToUNIX -and $_.'short-description' -match "Action content saved|Action saved|Action created" } | Sort-Object -Property 'time-stamp-val' -Descending 
                     if($logList.Count -gt 0) {
-                        #return object
-                        #TODO: Q: Do we need to add the date information to the action object before returning it?
-                        $item
+                        #Add the most recent updated time to our custom object.
+                        $item.updatedAt = $logList[0].'time-stamp-val'
                     }
                 }
 
-            }
+            }  -ThrottleLimit $Throttle
+
+            Write-Verbose "$(Get-Date) Return changed Actions"
+            $itemList | Where-Object { $_.updatedAt -gt $DateFromUNIX -and $_.updatedAt -lt $DateToUNIX }
         }
 
         function intGet-WorkflowScripts
@@ -339,6 +360,7 @@ $newBody = @"
             Write-Verbose "$(Get-Date) Get Workflows"
             $method = "GET"
             
+            #TODO: Add paging
             $uri = "$($apiUri)/workflows?maxResult=2147483647&startIndex=0&queryCount=false"
 
             if($Tags) {
@@ -386,8 +408,7 @@ $newBody = @"
             Write-Verbose "$(Get-Date) Total Workflows returned: $($itemList.Count)"
 
             #TODO: Is there an API filter that can be applied instead of doing it this way?
-            Write-Verbose "$(Get-Date) Output Workflows that match the date requirements"
-
+            Write-Verbose "$(Get-Date) Returned changed Workflows"
             $itemList | Where-Object { $_.updatedAt -gt $DateFromUNIX -and $_.updatedAt -lt $DateToUNIX }
 
         }
@@ -398,19 +419,19 @@ $newBody = @"
     {
 
         #--- Search Actions ---------------------------------------------------
-        if ($Type -eq "action")
+        if ($Type -eq "Action")
         {
             intGet-ActionScripts
         }
 
         #--- Search Workflows -------------------------------------------------
-        if ($Type -eq "workflow")
+        if ($Type -eq "Workflow")
         {
             intGet-WorkflowScripts
         }
 
         #--- Search both workflows and actions --------------------------------
-        if ($Type -eq "all")
+        if ($Type -eq "All")
         {
             intGet-ActionScripts
             intGet-WorkflowScripts
@@ -420,5 +441,6 @@ $newBody = @"
 
     End
     {
+        Write-Verbose "$(Get-Date) End"
     }
 }
