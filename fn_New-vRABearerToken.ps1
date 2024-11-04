@@ -10,7 +10,7 @@ function New-vRABearerToken {
 
   Bearer <token>
   VAA API - IaaS
-  
+
   <token>
   VAA API - Catalog
 #>
@@ -126,6 +126,18 @@ Process {
             $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck:$SkipCertificateCheck
         } else {
             $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body
+        }
+    } 
+    catch [System.Net.Http.HttpRequestException] {
+        if($($_.ErrorDetails.Message) -eq "The remote certificate is invalid because of errors in the certificate chain: UntrustedRoot" ) {
+            throw "$($_.ErrorDetails.Message). If you trust this server try the -SkipCertificateCheck parameter. PS7+ only."
+
+        } else {
+            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+            Write-Output "Exception:            $($_.Exception)"
+            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+            throw
         }
     }
     catch 
