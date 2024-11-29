@@ -33,6 +33,10 @@ function Search-vROScriptItem
 .PARAMETER SkipCertificateCheck
     Skips certificate validation checks that include all validations such as expiration, revocation, trusted root authority, etc.
     WARNING: Using this parameter is not secure and is not recommended. This switch is only intended to be used against known hosts using a self-signed certificate for testing purposes. Use at your own risk.
+.PARAMETER Bearer
+    An override for use on an external Orchestrator server. Generate a bearer token via Automation server for use here. Assumes that 
+    Orchestrator is vIDM integrated with the same vIDM as Automation. This will override the authentication process within
+    this function. Bit of a Hack to be sure. Assumes bearer token is:  "Bearer xxxxxxx"
 .EXAMPLE
     $pattern = ".local"
     $credential = Get-Credential -Username "user@corp.local" -Message "Please enter Aria Automation Username and password"
@@ -134,8 +138,10 @@ function Search-vROScriptItem
         [string[]]$Tags,
 
         [Parameter(Mandatory=$false)]
-        [Switch]$SkipCertificateCheck=$false
-        
+        [Switch]$SkipCertificateCheck=$false,
+
+        [Parameter(Mandatory,ParameterSetName="Bearer")]
+        [String]$Bearer
     )
 
     Begin
@@ -161,6 +167,8 @@ function Search-vROScriptItem
             $shortUsername = $Username.Split("@")[0]
             $vRADomain = $Username.Split("@")[1]
             $UnsecurePassword = (New-Object System.Management.Automation.PSCredential('username', $Password)).GetNetworkCredential().Password
+        } elseif ($PSCmdlet.ParameterSetName -eq "Bearer") {
+            #nothing to do here
         } else {
             throw "Unable to determine parameter set."
         }
@@ -195,25 +203,26 @@ function Search-vROScriptItem
         $headers.Add("Accept", 'application/json')
         $headers.Add("Content-Type", 'application/json')
 
-        $method = "POST"
-        $baseUrl = "https://$($ComputerName)"
-        $uri = "$($baseUrl)/csp/gateway/am/api/login?access_token"
+        if(!$Bearer) {
+            $method = "POST"
+            $baseUrl = "https://$($ComputerName)"
+            $uri = "$($baseUrl)/csp/gateway/am/api/login?access_token"
 
-        Write-Verbose "$(Get-Date) Request a token from vRA"
-        Write-Verbose "$(Get-Date) uri: $($uri)"
-        try
-        {
-            $response = $null
-            $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck
-        }
-        catch 
-        {
-            Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
-            Write-Output "Error Message:        $($_.ErrorDetails.Message)"
-            Write-Output "Exception:            $($_.Exception)"
-            Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
-            throw
-        }
+            Write-Verbose "$(Get-Date) Request a token from vRA"
+            Write-Verbose "$(Get-Date) uri: $($uri)"
+            try
+            {
+                $response = $null
+                $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $body -SkipCertificateCheck
+            }
+            catch 
+            {
+                Write-Output "Error Exception Code: $($_.exception.gettype().fullname)"
+                Write-Output "Error Message:        $($_.ErrorDetails.Message)"
+                Write-Output "Exception:            $($_.Exception)"
+                Write-Output "StatusCode:           $($_.Exception.Response.StatusCode.value__)"
+                throw
+            }
 
 Write-Verbose "$(Get-Date) Refresh Token received."
 $newBody = @"
@@ -222,28 +231,32 @@ $newBody = @"
 } 
 "@
 
-        $method = "POST"
-        $baseUrl = "https://$($ComputerName)"
-        $uri = "$($baseUrl)/iaas/api/login"
+            $method = "POST"
+            $baseUrl = "https://$($ComputerName)"
+            $uri = "$($baseUrl)/iaas/api/login"
 
-        Write-Verbose "$(Get-Date) Request a bearer token from vRA"
-        try
-        {
-            $response = $null
-            $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $newBody -SkipCertificateCheck
-        }
-        catch 
-        {
-            $_.Exception.gettype().fullname
-            $_.Exception
-            $_.ErrorDetails.Message
-            Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
-            throw
+            Write-Verbose "$(Get-Date) Request a bearer token from vRA"
+            try
+            {
+                $response = $null
+                $response = Invoke-RestMethod -Method $method -Uri $uri -Headers $headers -Body $newBody -SkipCertificateCheck
+            }
+            catch 
+            {
+                $_.Exception.gettype().fullname
+                $_.Exception
+                $_.ErrorDetails.Message
+                Write-Output "StatusCode:" $_.Exception.Response.StatusCode.value__
+                throw
+            }
+
+            Write-Verbose "$(Get-Date) Bearer Token received. Add the retrieved Bearer token to the headers"
+            $bearer_token = $response.token
+            $headers.Add("Authorization", "Bearer $($bearer_token)")
+        } else {
+            $headers.Add("Authorization", $Bearer)
         }
 
-        Write-Verbose "$(Get-Date) Bearer Token received. Add the retrieved Bearer token to the headers"
-        $bearer_token = $response.token
-        $headers.Add("Authorization", "Bearer $($bearer_token)")
 
         Write-Verbose "$(Get-Date) Headers: $($headers | Out-String)"
 
