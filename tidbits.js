@@ -62,3 +62,5 @@ for each ( var parameter in parameterNames) {
     System.log("   " + parameter + " : " + System.getContext().getParameter(parameter));
 }
 
+//The default vRA Host in vRO (restHost?)
+VraHostManager.defaultHostData
