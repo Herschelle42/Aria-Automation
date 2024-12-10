@@ -30,6 +30,7 @@ function Search-vROScriptItem
     The tag array search is an "AND". Meaning the workflow must contain ALL the tags. Each folder in a Workflow path is a tag.
     Filtering by tags can significantly speed up the workflow search.
     Actions do not support Tag filtering. Tags will be ignored during Action searches.
+    Tags do not accept spaces. Orchestrator has probably replace them with underscores (_)
 .PARAMETER SkipCertificateCheck
     Skips certificate validation checks that include all validations such as expiration, revocation, trusted root authority, etc.
     WARNING: Using this parameter is not secure and is not recommended. This switch is only intended to be used against known hosts using a self-signed certificate for testing purposes. Use at your own risk.
@@ -134,7 +135,7 @@ function Search-vROScriptItem
         [Switch]$Regex=$false,
 
         [Parameter(Mandatory=$false)]
-        [ValidateScript({ foreach ($tag in $_) { if ($tag -match '\s') { return $false } } return $true }, ErrorMessage="Tags cannot contain spaces")]
+        [ValidateScript({ foreach ($tag in $_) { if ($tag -match '\s') { return $false } } return $true }, ErrorMessage="Tags cannot contain spaces. Try replacig spaces with underscores.")]
         [string[]]$Tags,
 
         [Parameter(Mandatory=$false)]
