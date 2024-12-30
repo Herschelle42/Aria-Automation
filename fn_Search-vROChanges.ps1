@@ -70,13 +70,13 @@ function Search-vROChanges
   Author:  Clint Fritz
   Enhancments ideas: 
   - Add paging for Workflows
-  - Add paging for Actions - not possible atm, as no parameters in API for actions
+  - Add paging for Actions - not possible, currently no parameters in API for actions
   - Add foreach parallel to the search of audit-logs for Actions (if using Powershell 7.x +) as they have to go through every Action to get the audit-logs
     example:   $itemlist | Foreach-Object -Parallel { <peform operations here> }  -ThrottleLimit 10
   - Add Package changed?
   - Add Policies?
-  - Add Resource Elements has updatedAt
-  - Add Configuration elements
+  - Add Resource Elements - has updatedAt
+  - Add Configuration elements?
   - Add Templates?
   - Add Custom Forms?
 
