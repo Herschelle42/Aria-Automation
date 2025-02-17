@@ -1,3 +1,6 @@
+//Get an objects class and type
+System.log('Class: ' + System.getObjectClassName(thisObject));
+System.log('Type:  ' + System.getObjectType(thisObject));
 
 //--- split a block of text, for example a list of items like server names, into an array to be processed.
 //var textArray = keylist.split('\n');
@@ -64,3 +67,27 @@ for each ( var parameter in parameterNames) {
 
 //The default vRA Host in vRO (restHost?)
 VraHostManager.defaultHostData
+
+//Convert a VRA:project Object to a Properties object
+var project = {
+  name: vraProject.name,
+  id: vraProject.id,
+  updatedAt: vraProject.updatedAt,
+  owner: vraProject.owner,
+  orgId: vraProject.orgId,
+  createdAt: vraProject.createdAt,
+  operationTimeout: vraProject.operationTimeout,
+  placementPolicy: vraProject.placementPolicy,
+  description: vraProject.description,
+  internalIdString: vraProject.internalIdString,
+  sharedResources: vraProject.sharedResources,
+  machineNamingTemplate: vraProject.machineNamingTemplate,
+
+  customPropertiesExtension: JSON.parse(vraProject.customPropertiesExtension),
+  administratorsExtension: JSON.parse(vraProject.administratorsExtension),
+  viewersExtension: JSON.parse(vraProject.viewersExtension),
+  memberExtension: JSON.parse(vraProject.memberExtension),
+  zonesExtension: JSON.parse(vraProject.zonesExtension),
+  constraintsExtension: JSON.parse(vraProject.constraintsExtension),
+  linksExtension: JSON.parse(vraProject.linksExtension)
+}
