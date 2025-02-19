@@ -91,3 +91,11 @@ var project = {
   constraintsExtension: JSON.parse(vraProject.constraintsExtension),
   linksExtension: JSON.parse(vraProject.linksExtension)
 }
+
+//Search for a workflow by name and report it's id.
+var workflowList = Server.query("Workflow", "name='My workflow'"); 
+
+for each (var wf in workflowList) {
+  System.log(wf.id);
+}
+
