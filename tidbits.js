@@ -99,3 +99,11 @@ for each (var wf in workflowList) {
   System.log(wf.id);
 }
 
+//iterate a Properties object
+for each(var key in customProperties.keys) {
+    System.log(key + ' : ' + customProperties[key]);
+}
+
+//dynamically update a properties object key
+body.customProperties[key] = customProperties[key]
+
