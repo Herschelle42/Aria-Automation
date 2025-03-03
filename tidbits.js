@@ -104,6 +104,11 @@ for each(var key in customProperties.keys) {
     System.log(key + ' : ' + customProperties[key]);
 }
 
-//dynamically update a properties object key
-body.customProperties[key] = customProperties[key]
+//add or update an item in a Properties object
+body.customProperties.test4 = 'value4';
 
+//dynamically update a properties object key
+body.customProperties[key] = customProperties[key];
+
+//remove an item by setting the value to null
+body.customProperties.test2 = null;
