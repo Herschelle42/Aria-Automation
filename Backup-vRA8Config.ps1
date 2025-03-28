@@ -379,6 +379,22 @@ Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/request-tracker" -method GET -Nam
 $cloudAccounts = Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/cloud-accounts" -method GET -Name "cloud-accounts" | Select-Object -ExpandProperty Content
 $cloudAccounts.name
 
+Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-types" -method GET -Name "resource-types"
+$resourceActions = Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-actions" -method GET -Name "resource-actions"  | Select-Object -ExpandProperty Content
+#Save each of the resource action forms in a subdirectory vs creating a custom complete json file
+$thisDirectory = "$($backupDirectory)\resource-actions"
+if(-not (Test-Path -Path $thisDirectory)) {
+    Write-Output "[INFO] $(Get-Date) Creating directory"
+    New-Item -ItemType Directory -Path $thisDirectory -Force
+} else {
+    Write-Verbose "$(Get-Date) Directory already exists"
+}
+
+foreach($action in $resourceActions) {
+    Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-actions/$($action.id)/form" -method GET -Name "$($action.id)" -Path $thisDirectory
+}
+
+
 #endregion ---
 
 Write-Output "[INFO] $(Get-Date) End"
