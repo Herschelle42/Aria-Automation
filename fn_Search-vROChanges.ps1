@@ -297,6 +297,7 @@ $newBody = @"
                 $hash.href = $item.href
                 $hash.rel = $item.rel
                 $hash.updatedAt = $null
+                $hash.updatedAtString = $null
                 $object = new-object PSObject -property $hash 
                 $object
   
@@ -346,6 +347,7 @@ $newBody = @"
                     if($logList.Count -gt 0) {
                         #Add the most recent updated time to our custom object.
                         $item.updatedAt = $logList[0].'time-stamp-val'
+                        $item.updatedAtString = (Get-Date 1970-01-01)+([System.TimeSpan]::FromMilliseconds($logList[0].'time-stamp-val'))
                     }
                 }
 
