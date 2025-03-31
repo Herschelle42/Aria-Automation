@@ -75,8 +75,8 @@ function Search-vROChanges
     example:   $itemlist | Foreach-Object -Parallel { <peform operations here> }  -ThrottleLimit 10
   - Add Package changed?
   - Add Policies?
-  - Add Resource Elements - has updatedAt
-  - Add Configuration elements?
+  - Add Resource Elements has updatedAt
+  - Add Configuration elements
   - Add Templates?
   - Add Custom Forms?
 
@@ -400,7 +400,12 @@ $newBody = @"
                 }#end foreach attrib
                 $hash.href = $item.href
                 $hash.rel = $item.rel
-                $hash.Script = $null
+                if($hash.globalTags) {
+                    $hash.path = $hash.globalTags.Replace(':__SYSTEM_TAG__','/').replace(' ','')
+                } else {
+                    $hash.path = $null
+                }
+                $hash.script = $null
                 $object = new-object PSObject -property $hash 
                 $object
   
