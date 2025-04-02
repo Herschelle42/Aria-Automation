@@ -37,6 +37,10 @@ function Search-vROChanges
 .PARAMETER Throttle
   Advanced setting to speed up retrieval of Action audit data. Default is 10. Be careful setting
   this too high as this will impact Aria Automation with concurrent API calls.
+.PARAMETER AuditLogLimit
+  Advanced setting to change the number of audit logs to retrieve. Default is 100. 
+  If there have been more than 100 changes within the timeperiod the latest update time reported
+  may not be accurate. This is a workaround as API is limited and does not support a SORT.
 .EXAMPLE
   Get changes in the last 7 days
 
@@ -70,15 +74,22 @@ function Search-vROChanges
   Author:  Clint Fritz
   Enhancments ideas: 
   - Add paging for Workflows
-  - Add paging for Actions - not possible, currently no parameters in API for actions
-  - Add foreach parallel to the search of audit-logs for Actions (if using Powershell 7.x +) as they have to go through every Action to get the audit-logs
-    example:   $itemlist | Foreach-Object -Parallel { <peform operations here> }  -ThrottleLimit 10
+  - Add paging for Actions - Not possible, currently no parameters in API for actions
   - Add Package changed?
   - Add Policies?
   - Add Resource Elements has updatedAt
   - Add Configuration elements
   - Add Templates?
   - Add Custom Forms?
+  - Add Resource Actions
+
+  updatedAtLocal is the updated UNIX time local to Orchestrator
+  timeStampLocal is the updated human readable time local to Orchestrator
+
+  type and path have added to Action output to line up with workflow output to 
+  allow easier powershell selection and display
+
+  if user = internal then this is usually associated with a plugin installation
 
 #>
 
@@ -130,12 +141,16 @@ function Search-vROChanges
         [DateTime]$DateTo = (Get-Date),                   #Monday, 29 July 2024 10:02:14 AM
 
         [Parameter(Mandatory=$false)]
-        [int]$Throttle=10
+        [int]$Throttle=10,
+        
+        [Parameter(Mandatory=$false)]
+        [int]$AuditLogLimit=100
         
     )
 
     Begin
     {
+
 
         Write-Verbose "$(Get-Date) ParameterSet:         $($PSCmdlet.ParameterSetName)"
         Write-Verbose "$(Get-Date) Protocol:             $($Protocol)"
@@ -171,6 +186,8 @@ function Search-vROChanges
         #Convert Dates to unix time for comparison.
         $DateFromUNIX = [int64](Get-Date -Date $DateFrom -UFormat %s) * 1000
         $DateToUNIX = [int64](Get-Date -Date $DateTo -UFormat %s) * 1000
+        Write-Verbose "$(Get-Date) Date From (UNIX): $($DateFrom) ($($DateFromUNIX))"
+        Write-Verbose "$(Get-Date) Date To (UNIX): $($DateTo) ($($DateToUNIX))"
 
         Write-Verbose "$(Get-Date) vRA8 Header Creation"
         $body = @{
@@ -293,30 +310,37 @@ $newBody = @"
                 foreach ($attrib in $item.attributes)
                 {
                     $hash.$($attrib.name) = $($attrib.value)
-                }#end foreach attrib
+                }
                 $hash.href = $item.href
                 $hash.rel = $item.rel
-                $hash.updatedAt = $null
-                $hash.updatedAtString = $null
+                #duplicate some data to align details between Actions and Workflows
+                $hash.type = $item.rel
+                $hash.path = $null
+                $hash.updatedAtLocal = $null
+                $hash.timeStampLocal = $null
+                $hash.user = $null
                 $object = new-object PSObject -property $hash 
+                #hack job - $hash.path = $item.fqn does not work because $item.fqn does not seem to exist or have a value at that point.
+                $object.path = $object.fqn
                 $object
   
             }
             Write-Verbose "$(Get-Date) Total Actions returned: $($itemList.Count)"
 
             Write-Verbose "$(Get-Date) Get Audit logs"
+            #Note: Verbose logging does not display within the -Parallel
             $itemlist | Foreach-Object -Parallel { 
                 $item = $_
                 
                 $actionId = $item.id
-                Write-Verbose "$(Get-Date) Name: $($item.name)"
-                Write-Verbose "$(Get-Date) Id  : $($item.id)"
-                #Write-Verbose "$(Get-Date) Path: $($item.fqn)"
+                Write-Verbose "$(Get-Date) Name (Id): $($item.name) ($($item.id))"
+                Write-Verbose "$(Get-Date) Path: $($item.fqn)"
                 
                 try {
                     $result = $null
                     $method = "Get"
-                    $uri = "$($using:apiUri)/audit-logs?fetchLimit=100&severity=info&fromDate=$($using:DateFromUNIX)&toDate=$($using:DateToUNIX)&objectId=$($actionId)"
+                    #Note: I have not found a way to sort or write a better filter to get just the latest audit log.
+                    $uri = "$($using:apiUri)/audit-logs?fetchLimit=$($using:auditLogLimit)&severity=info&fromDate=$($using:DateFromUNIX)&toDate=$($using:DateToUNIX)&objectId=$($actionId)"
                     $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $using:headers -SkipCertificateCheck:$using:SkipCertificateCheck
                 } catch [System.Net.WebException] {
         
@@ -346,15 +370,17 @@ $newBody = @"
                     [array]$logList = $result.events | Select-Object -ExpandProperty audit-log | Where-Object { $_.'time-stamp-val' -gt $using:DateFromUNIX -and $_.'time-stamp-val' -lt $using:DateToUNIX -and $_.'short-description' -match "Action content saved|Action saved|Action created" } | Sort-Object -Property 'time-stamp-val' -Descending 
                     if($logList.Count -gt 0) {
                         #Add the most recent updated time to our custom object.
-                        $item.updatedAt = $logList[0].'time-stamp-val'
-                        $item.updatedAtString = (Get-Date 1970-01-01)+([System.TimeSpan]::FromMilliseconds($logList[0].'time-stamp-val'))
+                        $item.updatedAtLocal = $logList[0].'time-stamp-val'
+                        $item.timeStampLocal = $logList[0].'time-stamp'
+                        $item.user = $logList[0].user
                     }
                 }
 
             }  -ThrottleLimit $Throttle
 
             Write-Verbose "$(Get-Date) Return changed Actions"
-            $itemList | Where-Object { $_.updatedAt -gt $DateFromUNIX -and $_.updatedAt -lt $DateToUNIX }
+            #Write-Verbose "$(Get-Date) Count: $(($itemList | Where-Object { $_.updatedAtLocal -gt $DateFromUNIX -and $_.updatedAtLocal -lt $DateToUNIX }).count)"
+            $itemList | Where-Object { $_.updatedAtLocal -gt $DateFromUNIX -and $_.updatedAtLocal -lt $DateToUNIX }
         }
 
         function intGet-WorkflowScripts
@@ -399,7 +425,15 @@ $newBody = @"
                 foreach ($attrib in $item.attributes)
                 {
                     $hash.$($attrib.name) = $($attrib.value)
-                }#end foreach attrib
+                }
+                if($hash.updatedAt) {
+                    $hash.timeStamp = (Get-Date 1970-01-01)+([System.TimeSpan]::FromMilliseconds($hash.updatedAt))
+                } else {
+                    $hash.updatedAt = $null
+                }
+                $hash.updatedAtLocal = $null
+                $hash.timeStampLocal = $null
+                $hash.user = $null
                 $hash.href = $item.href
                 $hash.rel = $item.rel
                 if($hash.globalTags) {
@@ -413,6 +447,48 @@ $newBody = @"
   
             }
             Write-Verbose "$(Get-Date) Total Workflows returned: $($itemList.Count)"
+
+            Write-Verbose "$(Get-Date) Get Audit logs for new or changed items"
+            #Note: verbose within -Parallel does not display
+            $itemlist | Where-Object { $_.updatedAt -gt $DateFromUNIX -and $_.updatedAt -lt $DateToUNIX } | Foreach-Object -Parallel { 
+                $item = $_
+                
+                Write-Verbose "$(Get-Date) Name (Id): $($item.name) ($($item.id))"
+                
+                try {
+                    $result = $null
+                    $method = "Get"
+                    $uri = "$($using:apiUri)/audit-logs?fetchLimit=$($using:auditLogLimit)&severity=info&fromDate=$($using:DateFromUNIX)&toDate=$($using:DateToUNIX)&objectId=$($item.id)"
+                    Write-Verbose "$(Get-Date) uri: $($uri)"
+                    $result = Invoke-RestMethod -Method $method -UseBasicParsing -Uri $uri -Headers $using:headers -SkipCertificateCheck:$using:SkipCertificateCheck
+                } catch [System.Net.WebException] {
+        
+                    if ($($_.Exception.Message) -eq "The remote server returned an error: (400) Bad Request." )
+                    {
+                        Write-Error "$(Get-Date) [ERROR] !!! $($_.Exception.Message)"
+                    } else {
+                        Write-Error "Workflow: $($item.id) ($($item.name))"
+                        throw
+                    }
+
+                } catch {
+                    Write-Error "Workflow: $($item.id) ($($item.name))"
+                    throw
+                }
+
+                #Write-Verbose "$(Get-Date) result: $($result | Convertto-Json -Depth 2)"
+
+                if($result.events.Count -gt 0) {
+                    [array]$logList = $result.events | Select-Object -ExpandProperty audit-log | Where-Object { $_.'time-stamp-val' -gt $using:DateFromUNIX -and $_.'time-stamp-val' -lt $using:DateToUNIX -and $_.'short-description' -match "Workflow content saved|Workflow saved|Workflow created" } | Sort-Object -Property 'time-stamp-val' -Descending 
+                    if($logList.Count -gt 0) {
+                        #Add the Local timestamps from the audit log as the main WF time is UTC
+                        $item.updatedAtLocal = $logList[0].'time-stamp-val'
+                        $item.timeStampLocal = $logList[0].'time-stamp'
+                        $item.user = $logList[0].user
+                    }
+                }
+
+            }  -ThrottleLimit $Throttle
 
             #TODO: Is there an API filter that can be applied instead of doing it this way?
             Write-Verbose "$(Get-Date) Returned changed Workflows"
