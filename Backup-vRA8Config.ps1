@@ -330,14 +330,20 @@ End {
 #endregion ---
 
 
+
 #region --- Export configurations ---------------------------------------------
 
 Invoke-vRAAPIBackup -uri "$($baseUrl)/project-service/api/projects" -method GET -Name "projectservice-projects"
 
-Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/cloud-accounts" -method GET -Name "cloud-accounts"
+$cloudAccounts = Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/cloud-accounts" -method GET -Name "cloud-accounts" | Select-Object -ExpandProperty Content
+#cannot remember why I am capturing the cloudAccounts like this
+#$cloudAccounts.name
+
+#no paging options
 Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/compute-gateways" -method GET -Name "compute-gateways"
 Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/compute-nats" -method GET -Name "compute-nats"
 #Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/data-collectors" -method GET -Name "data-collectors"
+
 Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/fabric-azure-storage-accounts" -method GET -Name "fabric-azure-storage-accounts"
 Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/fabric-computes" -method GET -Name "fabric-computes"
 Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/fabric-flavors" -method GET -Name "fabric-flavors"
@@ -374,13 +380,15 @@ Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/tags?`$top=100" -method GET -Name
 
 #Workload calls, deployments, machines etc
 Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/load-balancers" -method GET -Name "load-balancers"
-Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/request-tracker" -method GET -Name "request-tracker"
 
-$cloudAccounts = Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/cloud-accounts" -method GET -Name "cloud-accounts" | Select-Object -ExpandProperty Content
-$cloudAccounts.name
+#Ths is just an active tracker not a configuration to collect
+#Invoke-vRAAPIBackup -uri "$($baseUrl)/iaas/api/request-tracker" -method GET -Name "request-tracker"
+
+Invoke-vRAAPIBackup -uri "$($baseUrl)/properties/api/property-groups" -method GET -Name "property-groups"
+
 
 Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-types" -method GET -Name "resource-types"
-$resourceActions = Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-actions" -method GET -Name "resource-actions"  | Select-Object -ExpandProperty Content
+$resourceActions = Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-actions" -method GET -Name "resource-actions" | Select-Object -ExpandProperty Content
 #Save each of the resource action forms in a subdirectory vs creating a custom complete json file
 $thisDirectory = "$($backupDirectory)\resource-actions"
 if(-not (Test-Path -Path $thisDirectory)) {
@@ -393,6 +401,27 @@ if(-not (Test-Path -Path $thisDirectory)) {
 foreach($action in $resourceActions) {
     Invoke-vRAAPIBackup -uri "$($baseUrl)/form-service/api/custom/resource-actions/$($action.id)/form" -method GET -Name "$($action.id)" -Path $thisDirectory
 }
+
+$blueprintList = Invoke-vRAAPIBackup -uri "$($baseUrl)/blueprint/api/blueprints" -method GET -Name "blueprints" | Select-Object -ExpandProperty Content
+#Create a directory to save each of the items
+$thisDirectory = "$($backupDirectory)\blueprints"
+if(-not (Test-Path -Path $thisDirectory)) {
+    Write-Output "[INFO] $(Get-Date) Creating directory"
+    New-Item -ItemType Directory -Path $thisDirectory -Force
+} else {
+    Write-Verbose "$(Get-Date) Directory already exists"
+}
+
+foreach($item in $blueprintList) {
+    #TODO: fixme: The output only captures the blueprint content, due to the VRAAPIBakup function only returning $item.content !! which does not work for blueprints, i wonder what other things are also being affected.
+    Invoke-vRAAPIBackup -uri "$($baseUrl)/blueprint/api/blueprints/$($item.id)" -method GET -Name "$($item.id)" -Path $thisDirectory
+
+    #if there are version avaiable backup the different versions into their own subdirectory
+    if($item.totalVersions -gt 0) {
+        Invoke-vRAAPIBackup -uri "$($baseUrl)/blueprint/api/blueprints/$($item.id)/versions" -method GET -Name "$($item.id)-versions" -Path $thisDirectory | Select-Object -ExpandProperty Content
+    }
+}
+
 
 
 #endregion ---
