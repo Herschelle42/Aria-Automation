@@ -304,7 +304,9 @@ Process {
 
 
         Write-Verbose "$(Get-Date) Saving to file"
-        if ($allResults.content)
+        #Note: Some objects have a content key that contains a string and other items
+        #TODO: Validate the output is what is expected
+        if ($allResults.content -and $item.content.gettype().IsArray)
         {
             Write-Verbose "$(Get-Date) Count of $($Name) : $($allResults.content.count)" -Verbose
             $allResults.content | ConvertTo-Json -Depth 50 -Compress:$Compress | Out-File -FilePath "$($Path)\$($Name).json" -Encoding ascii 
@@ -412,13 +414,25 @@ if(-not (Test-Path -Path $thisDirectory)) {
     Write-Verbose "$(Get-Date) Directory already exists"
 }
 
-foreach($item in $blueprintList) {
-    #TODO: fixme: The output only captures the blueprint content, due to the VRAAPIBakup function only returning $item.content !! which does not work for blueprints, i wonder what other things are also being affected.
-    Invoke-vRAAPIBackup -uri "$($baseUrl)/blueprint/api/blueprints/$($item.id)" -method GET -Name "$($item.id)" -Path $thisDirectory
+$blueprintDetails = foreach($item in $blueprintList) {
+    #Gets the current draft content
+    Invoke-vRAAPIBackup -uri "$($baseUrl)$($item.selfLink)" -method GET -Name "$($item.id)" -Path $thisDirectory
 
     #if there are version avaiable backup the different versions into their own subdirectory
     if($item.totalVersions -gt 0) {
-        Invoke-vRAAPIBackup -uri "$($baseUrl)/blueprint/api/blueprints/$($item.id)/versions" -method GET -Name "$($item.id)-versions" -Path $thisDirectory | Select-Object -ExpandProperty Content
+        $versionList = Invoke-vRAAPIBackup -uri "$($baseUrl)$($item.selfLink)/versions" -method GET | Select-Object -ExpandProperty Content
+        foreach($version in $versionList){
+            #gets the versioned item content
+            $versionDirectory = "$($thisDirectory)\$($item.id)"
+            if(-not (Test-Path -Path $versionDirectory)) {
+                Write-Output "[INFO] $(Get-Date) Creating directory"
+                New-Item -ItemType Directory -Path $versionDirectory -Force
+            } else {
+                Write-Verbose "$(Get-Date) Directory already exists"
+            }
+
+            Invoke-vRAAPIBackup -uri "$($baseUrl)$($item.selfLink)/versions/$($version.id)" -method GET -Name "$($version.id)" -Path $versionDirectory
+        }
     }
 }
 
