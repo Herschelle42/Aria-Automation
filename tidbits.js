@@ -112,3 +112,8 @@ body.customProperties[key] = customProperties[key];
 
 //remove an item by setting the value to null
 body.customProperties.test2 = null;
+
+//test number inputs and assign a default value if not set by the user, for example in an Action or Workflow
+sleepTimeSeconds == undefined ? sleepTimeSeconds = 10 : sleepTimeSeconds;
+attemptLimit == undefined ? attemptLimit = 10 : attemptLimit;
+
