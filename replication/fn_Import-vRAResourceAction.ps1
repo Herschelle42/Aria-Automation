@@ -71,7 +71,7 @@ function Import-vRAResourceAction {
 
         $counter = 1
         foreach ($item in $jsonObject) {
-            Write-Verbose "Processing $($counter) of $($jsonObject.Count) - $($item.displayName)"
+            Write-Verbose "Processing $($counter) of $($jsonObject.Count) - $($item.displayName)" -Verbose
             $counter++
 
             #confirm has some mandatory fields
@@ -125,10 +125,10 @@ function Import-vRAResourceAction {
                 throw
             }
 
-            $counter = 0
+            $counterWait = 0
             $limit = 10
-            while ($response.status -and $response.status -ne "FINISHED" -and $counter -lt $limit) {
-                $counter++
+            while ($response.status -and $response.status -ne "FINISHED" -and $counterWait -lt $limit) {
+                $counterWait++
                 Write-Verbose "$(Get-Date) in progress"
                 Start-Sleep -Seconds 3
                 #Check the progress of the request
@@ -144,4 +144,3 @@ function Import-vRAResourceAction {
     }
 
 }
-
