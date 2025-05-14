@@ -1,6 +1,6 @@
 //Get an objects class and type
-System.log('Class: ' + System.getObjectClassName(thisObject));
 System.log('Type:  ' + System.getObjectType(thisObject));
+System.log('Class: ' + System.getObjectClassName(thisObject));
 
 //--- split a block of text, for example a list of items like server names, into an array to be processed.
 //var textArray = keylist.split('\n');
@@ -12,7 +12,6 @@ myArray = textList.filter(function(item) {
         return item;
     }
 });
-
 
 //--- Create a resource element
 var resourcePath = 'zDev/example'
@@ -117,3 +116,5 @@ body.customProperties.test2 = null;
 sleepTimeSeconds == undefined ? sleepTimeSeconds = 10 : sleepTimeSeconds;
 attemptLimit == undefined ? attemptLimit = 10 : attemptLimit;
 
+//Generate a random number between 0 and 1000
+Math.round(Math.random() * 1000);
