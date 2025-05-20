@@ -118,3 +118,6 @@ attemptLimit == undefined ? attemptLimit = 10 : attemptLimit;
 
 //Generate a random number between 0 and 1000
 Math.round(Math.random() * 1000);
+
+//get project id? when actino or workflow called from a catalog item
+var project = System.getContext().getParameter("_projectId");
